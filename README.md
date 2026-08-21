@@ -277,7 +277,7 @@ Rebound memiliki dua alur utama. Keduanya dibuat sesederhana mungkin.
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
 │  4. AI menampilkan kartu penerbangan + Alasan Kebijakan:        │
-│     "Tiket kelas Y — perubahan diizinkan, biaya admin $50."     │
+│     "Tiket kelas Y — perubahan diizinkan, biaya admin."     │
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
