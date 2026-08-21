@@ -1,10 +1,8 @@
 <div align="center">
 
-#✈️
 
 ### AI Agent untuk Penanganan Krisis & Perubahan Jadwal Penerbangan (Post-Booking)
 
-*Bukan tempat membeli tiket — melainkan agen cerdas yang menyelamatkan tiket yang sudah Anda miliki.*
 
 [![Hackathon](https://img.shields.io/badge/Alibaba%20Cloud%20x%20Atlas-Agentic%20AI%20Hackathon-orange)]()
 [![Platform](https://img.shields.io/badge/Dibangun%20dengan-Qoder-blue)]()
