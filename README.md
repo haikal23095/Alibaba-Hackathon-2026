@@ -144,7 +144,7 @@ AI **dilarang** menawarkan penerbangan pengganti sebelum memvalidasi aturan tike
 **🟢 Untuk Semua Orang:**
 Pertanyaan penting: *Apakah Rebound terhubung ke tempat tiket yang dibeli ( ex: traveloka, trip.com, dll) ?* **Tidak.**
 
-Data tiket yang sebenarnya tidak disimpan di Traveloka — Traveloka hanyalah tempat membeli (etalase). Data asli tersimpan di **sistem maskapai**. Yang menghubungkan Anda ke sana adalah **kode booking / PNR** (kode 6 karakter seperti `ABC123`) yang Anda terima setelah membeli tiket.
+Data tiket yang sebenarnya tidak disimpan di tempat tiket yang dibeli. Tempat tersebut hanyalah tempat untuk membeli (etalase). Data asli tersimpan di **sistem maskapai**. Yang menghubungkan Anda ke sana adalah **kode booking / PNR** (kode 6 karakter seperti `ABC123`) yang Anda terima setelah membeli tiket.
 
 > **Analogi:** PNR itu seperti **nomor rekening bank**. Uang Anda tidak disimpan di "nomor"-nya, melainkan di **bank**-nya. Nomor rekening hanyalah *kunci* untuk mengaksesnya. Begitu pula PNR — ia kunci untuk membuka data tiket asli Anda.
 
