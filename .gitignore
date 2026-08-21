@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Environment & secrets
+.env
+.env.local
+*.key
+credentials.json
+
+# Build output
+dist/
+build/
+*.log
+
+# Alibaba Cloud / deployment
+.fc/
+.aliyun/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
