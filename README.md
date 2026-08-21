@@ -57,7 +57,7 @@
 
 ## 🧭 Ringkasan
 
-**Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling menyakitkan dalam perjalanan udara — yang selama ini paling terabaikan:
+**Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling krusial dalam perjalanan udara — yang selama ini paling terabaikan:
 
 1. **Gangguan penerbangan** (delay / pembatalan)
 2. **Perubahan jadwal mandiri** yang disertai validasi kebijakan tiket
