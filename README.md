@@ -145,7 +145,7 @@ The AI is **forbidden** from offering a replacement flight before validating the
 
 ## 🔑 Data Sources & the Role of the PNR
 
-<<<<<<< HEAD
+
 **🟢 For Everyone:**
 An important question: *Is Rebound connected to Traveloka, where the ticket was bought?* **No.**
 
