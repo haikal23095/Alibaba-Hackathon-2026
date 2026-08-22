@@ -57,7 +57,7 @@
 
 ## 🧭 Overview
 
-<<<<<<< HEAD
+
 **Rebound** is an **agentic AI application** that solves the two most painful problems in air travel — the ones that have been most neglected:
 =======
 **Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling krusial dalam perjalanan udara — yang selama ini paling terabaikan:
