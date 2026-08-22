@@ -61,7 +61,7 @@
 **Rebound** is an **agentic AI application** that solves the two most painful problems in air travel — the ones that have been most neglected:
 =======
 **Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling krusial dalam perjalanan udara — yang selama ini paling terabaikan:
->>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
+
 
 1. **Flight disruptions** (delays / cancellations)
 2. **Self-service schedule changes** with ticket policy validation
@@ -155,7 +155,6 @@ The actual ticket data is not stored at Traveloka — Traveloka is only the poin
 Pertanyaan penting: *Apakah Rebound terhubung ke tempat tiket yang dibeli ( ex: traveloka, trip.com, dll) ?* **Tidak.**
 
 Data tiket yang sebenarnya tidak disimpan di tempat tiket yang dibeli. Tempat tersebut hanyalah tempat untuk membeli (etalase). Data asli tersimpan di **sistem maskapai**. Yang menghubungkan Anda ke sana adalah **kode booking / PNR** (kode 6 karakter seperti `ABC123`) yang Anda terima setelah membeli tiket.
->>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
 
 > **Analogy:** a PNR is like a **bank account number**. Your money isn't kept inside the "number" — it's kept at the **bank**. The account number is just the *key* to access it. The same goes for a PNR: it's the key that unlocks your real ticket data.
 
