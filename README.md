@@ -35,6 +35,7 @@
 **How It Works**
 - [How the Agent Works](#️-how-the-agent-works)
 - [Data Sources & the Role of the PNR](#-data-sources--the-role-of-the-pnr)
+- [Sample Atlas API Response](#sample-atlas-api-response)
 - [Authorization Model](#-authorization-model)
 - [Agent Tools](#-agent-tools)
 - [User Flows](#-user-flows)
@@ -57,11 +58,7 @@
 
 ## 🧭 Overview
 
-<<<<<<< HEAD
-**Rebound** is an **agentic AI application** that solves the two most painful problems in air travel — the ones that have been most neglected:
-=======
-**Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling krusial dalam perjalanan udara — yang selama ini paling terabaikan:
->>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
+**Rebound** is an **agentic AI application** that solves the two most crucial problems in air travel — the ones that have been most neglected:
 
 1. **Flight disruptions** (delays / cancellations)
 2. **Self-service schedule changes** with ticket policy validation
@@ -145,17 +142,10 @@ The AI is **forbidden** from offering a replacement flight before validating the
 
 ## 🔑 Data Sources & the Role of the PNR
 
-<<<<<<< HEAD
 **🟢 For Everyone:**
-An important question: *Is Rebound connected to Traveloka, where the ticket was bought?* **No.**
+An important question: *Is Rebound connected to the platform where the ticket was bought (e.g. Traveloka, Trip.com, etc.)?* **No.**
 
-The actual ticket data is not stored at Traveloka — Traveloka is only the point of purchase (the storefront). The real data lives in the **airline's system**. What connects you to it is the **booking code / PNR** (a 6-character code such as `ABC123`) that you receive after buying the ticket.
-=======
-**🟢 Untuk Semua Orang:**
-Pertanyaan penting: *Apakah Rebound terhubung ke tempat tiket yang dibeli ( ex: traveloka, trip.com, dll) ?* **Tidak.**
-
-Data tiket yang sebenarnya tidak disimpan di tempat tiket yang dibeli. Tempat tersebut hanyalah tempat untuk membeli (etalase). Data asli tersimpan di **sistem maskapai**. Yang menghubungkan Anda ke sana adalah **kode booking / PNR** (kode 6 karakter seperti `ABC123`) yang Anda terima setelah membeli tiket.
->>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
+The actual ticket data is not stored at the platform you bought from — that platform is only the point of purchase (the storefront). The real data lives in the **airline's system**. What connects you to it is the **booking code / PNR** (a 6-character code such as `ABC123`) that you receive after buying the ticket.
 
 > **Analogy:** a PNR is like a **bank account number**. Your money isn't kept inside the "number" — it's kept at the **bank**. The account number is just the *key* to access it. The same goes for a PNR: it's the key that unlocks your real ticket data.
 
@@ -176,15 +166,44 @@ Step 2  get_flight_status("ABC123")
         → Fetch the real data: "Garuda GA-xxx, Nov 30, class Y"
               │
 Step 3  read_fare_rules("Y")           ← REQUIRED first (Policy-Aware)
-        → "Class Y tickets are changeable, $50 admin fee"
+        → "Class Y tickets are changeable, an admin fee applies"
               │
-Step 4  search_alternatives("CGK", "SIN", "Nov 26", "Y")
+Step 4  search_alternatives("CGK", "KUL", "Nov 26", "Y")
         → Look for available seats on Nov 26
               │
 Step 5  Render the Nov 26 flight card + fare difference + admin fee
               │
 Step 6  The passenger taps "Confirm" → reissue_ticket() → the Nov 26 ticket is issued
 ```
+
+### Sample Atlas API Response
+
+**🟢 For Everyone:** Below is real output we retrieved from the Atlas Travel API — the actual list of flights the agent has to work with in Step 4 above. We include it as evidence that the Atlas integration has been verified against live sandbox data, not just designed on paper.
+
+**🔵 For Technical Readers:** `search_alternatives("CGK", "KUL", ...)` — direct flights, sandbox environment.
+
+**Direct Flights**
+
+| Departure | Arrival | Flight | Duration | Price (USD) |
+| :--- | :--- | :--- | :--- | :--- |
+| 05:00 CGK | 08:10 KUL | ID8397 (Batik Air) | 2h 10m | **$72.34 — cheapest** |
+| 08:35 CGK | 11:35 KUL | AK381 (AirAsia) | 2h 0m | $116.48 |
+| 09:00 CGK | 12:15 KUL | OD399 (Batik Air Malaysia) | 2h 15m | $92.75 |
+| 11:00 CGK | 14:10 KUL | 8B673 (TransNusa) | 2h 10m | $95.89 |
+| 13:10 CGK | 16:15 KUL | AK352 (AirAsia) | 2h 5m | $116.48 |
+| 14:15 CGK | 17:30 KUL | OD389 (Batik Air Malaysia) | 2h 15m | $104.12 |
+| 16:45 CGK | 19:45 SZB* | 8B699 (TransNusa) | 2h 0m | $94.76 |
+
+\* SZB = Sultan Abdul Aziz Shah Airport (Subang), Kuala Lumpur area.
+
+> ⚠️ **Note:** these are sample figures captured from the Atlas **sandbox** at a point in time — they are illustrative, not live fares.
+
+**What this tells the agent design:**
+
+- **Multiple carriers per route** — the agent must rank options, not just take the first result. Cheapest (`$72.34`) and fastest (`2h 0m`) are different flights, so "best" needs an explicit rule.
+- **Alternate airports in the same city** — the last row lands at **SZB (Subang)** rather than KUL. The agent must surface this clearly, since a passenger expecting KUL would otherwise be moved to a different airport without noticing.
+
+---
 
 > **The advantage:** because all it needs is a PNR, Rebound can serve tickets from **any OTA** without a separate integration per platform.
 
@@ -273,7 +292,7 @@ Rebound has two main flows. Both are made as simple as possible.
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  1. You open the app & type your request in plain language:     │
-│     "Change my flight from Singapore to tomorrow morning."      │
+│     "Change my Kuala Lumpur flight to tomorrow morning."        │
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
@@ -287,13 +306,8 @@ Rebound has two main flows. Both are made as simple as possible.
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
-<<<<<<< HEAD
 │  4. The AI shows a flight card + the Policy Rationale:          │
-│     "Class Y ticket — change permitted, $50 admin fee."         │
-=======
-│  4. AI menampilkan kartu penerbangan + Alasan Kebijakan:        │
-│     "Tiket kelas Y — perubahan diizinkan, biaya admin."     │
->>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
+│     "Class Y ticket — change permitted, admin fee applies."     │
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
