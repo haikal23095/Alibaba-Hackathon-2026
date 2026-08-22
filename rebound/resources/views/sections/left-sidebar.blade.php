@@ -1,31 +1,25 @@
 <!-- Left Sidebar: Riwayat Tiket (Figma Light Theme Consistency) -->
-<aside x-show="leftSidebarOpen"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="-translate-x-full opacity-0"
-       x-transition:enter-end="translate-x-0 opacity-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="translate-x-0 opacity-100"
-       x-transition:leave-end="-translate-x-full opacity-0"
-       class="w-64 sm:w-72 bg-white text-slate-800 border-r border-[#E2E8F0] flex flex-col h-full shrink-0 z-30 select-none text-xs shadow-xs">
+<aside :class="leftSidebarOpen ? 'block' : 'hidden lg:block'"
+       class="w-full lg:w-64 xl:w-72 bg-white text-slate-800 border-r border-[#E2E8F0] flex flex-col h-full shrink-0 z-30 select-none text-xs shadow-xs pb-16 lg:pb-0">
     
     <!-- Top Action: Add / Monitor New Ticket -->
-    <div class="p-3 border-b border-slate-100 space-y-2">
+    <div class="p-3 border-b border-slate-100 space-y-2.5">
         <button @click="showAddTicketModal = true"
-                class="w-full py-2 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center justify-between shadow-xs transition hover:shadow">
-            <span class="flex items-center gap-1.5">
+                class="w-full h-10 px-3.5 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-between shadow-xs transition hover:shadow cursor-pointer">
+            <span class="flex items-center gap-2">
                 <i class="fa-solid fa-plus text-xs"></i>
                 <span x-text="lang === 'id' ? 'Pantau Tiket Baru' : 'Monitor New Ticket'"></span>
             </span>
-            <span class="text-[10px] bg-brand-700 px-1.5 py-0.2 rounded text-white font-mono">PNR</span>
+            <span class="text-[10px] font-bold bg-white/20 border border-white/25 px-2 py-0.5 rounded-md text-white font-mono tracking-wider">PNR</span>
         </button>
 
         <!-- Search Ticket PNR / Route -->
         <div class="relative">
-            <i class="fa-solid fa-magnifying-glass text-[11px] text-slate-400 absolute left-2.5 top-2.5"></i>
+            <i class="fa-solid fa-magnifying-glass text-[11px] text-slate-400 absolute left-3 top-3"></i>
             <input type="text" 
-                   x-model="ticketSearch"
-                   :placeholder="lang === 'id' ? 'Cari PNR / Rute / Maskapai...' : 'Search PNR / Route...'"
-                   class="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 transition">
+                    x-model="ticketSearch"
+                    :placeholder="lang === 'id' ? 'Cari PNR / Rute / Maskapai...' : 'Search PNR / Route...'"
+                    class="w-full h-9 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 transition">
         </div>
     </div>
 

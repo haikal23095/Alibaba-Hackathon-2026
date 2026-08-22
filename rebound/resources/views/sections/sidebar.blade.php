@@ -1,5 +1,5 @@
 <!-- Right Workspace Sidebar: Zoom-out & Compact Edition (Figma Nodes 3:342, 3:198, 21:1065, 25:1168) -->
-<aside class="w-full lg:w-[310px] xl:w-[330px] bg-white border-l border-slate-200 flex flex-col h-full overflow-y-auto shrink-0 z-20 text-xs">
+<aside class="w-full lg:w-[310px] xl:w-[330px] bg-white border-l border-slate-200 flex flex-col h-full overflow-y-auto shrink-0 z-20 text-xs pb-16 lg:pb-0">
     
     <!-- Sidebar Header (Compact) -->
     <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
@@ -65,7 +65,7 @@
             <button @click="activeSidebarTab = 'receipts'"
                     :class="activeSidebarTab === 'receipts' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'hover:text-slate-900'"
                     class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5">
-                <i class="fa-regular fa-receipt text-[10px]"></i>
+                <i class="fa-solid fa-receipt text-[10px]"></i>
                 <span class="truncate" x-text="lang === 'id' ? 'Resi' : 'Receipts'"></span>
             </button>
         </div>

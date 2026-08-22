@@ -84,6 +84,9 @@
     <!-- Modal My Trips -->
     @include('sections.my-trips-modal')
 
+    <!-- Smartphone Bottom Navigation Bar -->
+    @include('sections.mobile-bottom-nav')
+
     <!-- Modal Tambah Tiket Baru PNR -->
     <div x-show="showAddTicketModal" 
          x-cloak
@@ -130,6 +133,7 @@
         function reboundApp() {
             return {
                 lang: 'id', // 'id' or 'en'
+                mobileTab: 'assistant', // 'assistant', 'details', 'tickets'
                 flightStatus: 'delayed', // 'on-time', 'delayed', 'rebooked'
                 activeSidebarTab: 'overview', // 'overview', 'policy', 'schedule', 'receipts'
                 sidebarOpen: true,

@@ -74,25 +74,25 @@
     <div class="shrink-0 pt-2 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC] to-transparent">
         
         <!-- Suggestions Chips (Figma Nodes 15:816, 16:874, 16:880, 13:638) -->
-        <div class="mb-3.5 space-y-2">
-            <div class="text-xs font-bold text-brand-600 tracking-wide uppercase flex items-center gap-1.5">
-                <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
-                <span x-text="lang === 'id' ? 'Saran tentang apa yang harus ditanyakan kepada AI Kami' : 'Suggestions on what to ask Our AI'"></span>
+        <div class="mb-2 sm:mb-3.5 space-y-1.5">
+            <div class="text-[10px] sm:text-xs font-bold text-brand-600 tracking-wide uppercase flex items-center gap-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-[9px] sm:text-[10px]"></i>
+                <span x-text="lang === 'id' ? 'Saran Pertanyaan AI' : 'AI Suggestions'"></span>
             </div>
 
-            <div class="space-y-2">
-                <!-- Suggestion 1 -->
-                <button @click="sendMessage(lang === 'id' ? 'Tanyakan tentang penerbangan atau perubahan jadwal...' : 'Ask about flight status or rescheduling options...')"
-                        class="w-full text-left p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-between group shadow-sm hover:border-slate-300">
-                    <span x-text="lang === 'id' ? 'Tanyakan tentang penerbangan atau perubahan jadwal...' : 'Ask about flight status or rescheduling options...'"></span>
-                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-brand-500 transition"></i>
+            <div class="space-y-1.5">
+                <!-- Suggestion 1 (Visible on both mobile & desktop, compact size) -->
+                <button @click="sendMessage(lang === 'id' ? 'Tanyakan tentang kondisi cuaca di jadwal penerbangan anda..' : 'Ask about weather conditions affecting your flight..')"
+                        class="w-full text-left py-2 px-3 sm:p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl sm:rounded-2xl text-[11px] sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-between group shadow-xs hover:border-slate-300">
+                    <span class="truncate pr-2" x-text="lang === 'id' ? 'Tanyakan tentang kondisi cuaca di jadwal penerbangan anda..' : 'Ask about weather conditions affecting your flight..'"></span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-brand-500 transition shrink-0"></i>
                 </button>
 
-                <!-- Suggestion 2 -->
-                <button @click="sendMessage(lang === 'id' ? 'Tanyakan tentang kondisi cuaca di jadwal penerbangan anda..' : 'Ask about weather conditions affecting your flight..')"
-                        class="w-full text-left p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition flex items-center justify-between group shadow-sm hover:border-slate-300">
-                    <span x-text="lang === 'id' ? 'Tanyakan tentang kondisi cuaca di jadwal penerbangan anda..' : 'Ask about weather conditions affecting your flight..'"></span>
-                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-brand-500 transition"></i>
+                <!-- Suggestion 2 (Hidden on mobile, visible on tablet & desktop) -->
+                <button @click="sendMessage(lang === 'id' ? 'Tanyakan tentang penerbangan atau perubahan jadwal...' : 'Ask about flight status or rescheduling options...')"
+                        class="hidden sm:flex w-full text-left p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-2xl text-sm text-slate-600 hover:text-slate-900 transition items-center justify-between group shadow-xs hover:border-slate-300">
+                    <span x-text="lang === 'id' ? 'Tanyakan tentang penerbangan atau perubahan jadwal...' : 'Ask about flight status or rescheduling options...'"></span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-brand-500 transition shrink-0"></i>
                 </button>
             </div>
         </div>
