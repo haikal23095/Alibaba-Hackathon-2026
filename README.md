@@ -57,7 +57,11 @@
 
 ## 🧭 Overview
 
+<<<<<<< HEAD
 **Rebound** is an **agentic AI application** that solves the two most painful problems in air travel — the ones that have been most neglected:
+=======
+**Rebound** adalah **aplikasi AI agentic** yang menyelesaikan dua masalah paling krusial dalam perjalanan udara — yang selama ini paling terabaikan:
+>>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
 
 1. **Flight disruptions** (delays / cancellations)
 2. **Self-service schedule changes** with ticket policy validation
@@ -141,10 +145,17 @@ The AI is **forbidden** from offering a replacement flight before validating the
 
 ## 🔑 Data Sources & the Role of the PNR
 
+<<<<<<< HEAD
 **🟢 For Everyone:**
 An important question: *Is Rebound connected to Traveloka, where the ticket was bought?* **No.**
 
 The actual ticket data is not stored at Traveloka — Traveloka is only the point of purchase (the storefront). The real data lives in the **airline's system**. What connects you to it is the **booking code / PNR** (a 6-character code such as `ABC123`) that you receive after buying the ticket.
+=======
+**🟢 Untuk Semua Orang:**
+Pertanyaan penting: *Apakah Rebound terhubung ke tempat tiket yang dibeli ( ex: traveloka, trip.com, dll) ?* **Tidak.**
+
+Data tiket yang sebenarnya tidak disimpan di tempat tiket yang dibeli. Tempat tersebut hanyalah tempat untuk membeli (etalase). Data asli tersimpan di **sistem maskapai**. Yang menghubungkan Anda ke sana adalah **kode booking / PNR** (kode 6 karakter seperti `ABC123`) yang Anda terima setelah membeli tiket.
+>>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
 
 > **Analogy:** a PNR is like a **bank account number**. Your money isn't kept inside the "number" — it's kept at the **bank**. The account number is just the *key* to access it. The same goes for a PNR: it's the key that unlocks your real ticket data.
 
@@ -276,8 +287,13 @@ Rebound has two main flows. Both are made as simple as possible.
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
+<<<<<<< HEAD
 │  4. The AI shows a flight card + the Policy Rationale:          │
 │     "Class Y ticket — change permitted, $50 admin fee."         │
+=======
+│  4. AI menampilkan kartu penerbangan + Alasan Kebijakan:        │
+│     "Tiket kelas Y — perubahan diizinkan, biaya admin."     │
+>>>>>>> f72f2825feda4772fcd72ebc91358d45c6ed7e84
 └───────────────────────────┬────────────────────────────────────┘
                             ▼
 ┌────────────────────────────────────────────────────────────────┐
