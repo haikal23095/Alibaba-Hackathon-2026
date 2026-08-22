@@ -3,23 +3,39 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $users = [
+            [
+                'name' => 'Zakaria MP',
+                'email' => 'zakariamp@rebound.ai',
+                'password' => Hash::make('password'),
+            ],
+            [
+                'name' => 'Haikal Firmansyah',
+                'email' => 'haikal.firmansyah@rebound.ai',
+                'password' => Hash::make('password'),
+            ],
+            [
+                'name' => 'Tiara Fatimah Azzahra',
+                'email' => 'tiara.azzahra@rebound.ai',
+                'password' => Hash::make('password'),
+            ],
+        ];
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        foreach ($users as $userData) {
+            User::updateOrCreate(
+                ['email' => $userData['email']],
+                $userData
+            );
+        }
     }
 }
