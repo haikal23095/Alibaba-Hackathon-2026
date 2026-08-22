@@ -35,8 +35,13 @@
             }
         }
     </script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="min-h-full font-sans antialiased text-slate-800 bg-[#F8FAFC] flex flex-col justify-center py-10 sm:px-6 lg:px-8">
+<body class="min-h-full font-sans antialiased text-slate-800 bg-[#F8FAFC] flex flex-col justify-center py-10 sm:px-6 lg:px-8"
+      x-data="registerPage">
 
     <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <!-- Logo & Badge -->
@@ -53,7 +58,7 @@
 
     <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div class="bg-white py-7 px-5 sm:px-8 shadow-sm border border-slate-200/90 rounded-3xl space-y-5">
-            
+
             @if($errors->any())
                 <div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl space-y-1">
                     <div class="font-bold flex items-center gap-1.5">
@@ -68,18 +73,38 @@
                 </div>
             @endif
 
-            <!-- Google Sign-Up Button -->
+            <!-- Error dari Firebase JS SDK (ditampilkan via Alpine) -->
+            <div x-show="firebaseError" x-cloak
+                 class="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-start gap-2">
+                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                <span x-text="firebaseError"></span>
+            </div>
+
+            <!-- Peringatan jika konfigurasi Firebase belum diisi -->
+            @unless(config('firebase_web.configured'))
+                <div class="p-3 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-xl flex items-start gap-2">
+                    <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                    <span>Konfigurasi Firebase belum lengkap. Isi <code>FIREBASE_WEB_*</code> di file <code>.env</code> agar pendaftaran dapat digunakan.</span>
+                </div>
+            @endunless
+
+            <!-- Google Sign-Up Button (Firebase Auth) -->
             <div>
-                <a href="{{ route('google.login') }}" 
-                   class="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition hover:shadow flex items-center justify-center gap-3 group">
+                <button type="button"
+                        @click="signUpWithGoogle()"
+                        :disabled="loading || !firebaseConfigured"
+                        class="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition hover:shadow flex items-center justify-center gap-3 group disabled:opacity-60 disabled:cursor-not-allowed">
                     <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                     </svg>
-                    <span>Daftar dengan Google</span>
-                </a>
+                    <span x-show="!loading">Daftar dengan Google</span>
+                    <span x-show="loading" x-cloak class="flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...
+                    </span>
+                </button>
             </div>
 
             <!-- Divider -->
@@ -94,16 +119,13 @@
                 </div>
             </div>
 
-            <!-- Register Form -->
-            <form action="{{ route('register') }}" method="POST" class="space-y-3.5">
-                @csrf
-
+            <!-- Register Form (akun dibuat di Firebase Auth) -->
+            <form @submit.prevent="signUpWithEmail()" class="space-y-3.5">
                 <div>
                     <label for="name" class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap</label>
                     <div class="relative">
                         <i class="fa-regular fa-user text-slate-400 text-xs absolute left-3 top-3"></i>
-                        <input id="name" name="name" type="text" required 
-                               value="{{ old('name') }}"
+                        <input id="name" x-model="name" name="name" type="text" required
                                placeholder="Nama Lengkap Anda"
                                class="w-full bg-slate-50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-500 transition">
                     </div>
@@ -113,8 +135,7 @@
                     <label for="email" class="block text-xs font-semibold text-slate-700 mb-1">Alamat Email</label>
                     <div class="relative">
                         <i class="fa-regular fa-envelope text-slate-400 text-xs absolute left-3 top-3"></i>
-                        <input id="email" name="email" type="email" autocomplete="email" required 
-                               value="{{ old('email') }}"
+                        <input id="email" x-model="email" name="email" type="email" autocomplete="email" required
                                placeholder="nama@email.com"
                                class="w-full bg-slate-50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-500 transition">
                     </div>
@@ -124,7 +145,7 @@
                     <label for="password" class="block text-xs font-semibold text-slate-700 mb-1">Kata Sandi</label>
                     <div class="relative">
                         <i class="fa-solid fa-lock text-slate-400 text-xs absolute left-3 top-3"></i>
-                        <input id="password" name="password" type="password" required
+                        <input id="password" x-model="password" name="password" type="password" required minlength="6"
                                placeholder="Minimal 6 karakter"
                                class="w-full bg-slate-50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-500 transition">
                     </div>
@@ -134,28 +155,140 @@
                     <label for="password_confirmation" class="block text-xs font-semibold text-slate-700 mb-1">Konfirmasi Kata Sandi</label>
                     <div class="relative">
                         <i class="fa-solid fa-shield-check text-slate-400 text-xs absolute left-3 top-3"></i>
-                        <input id="password_confirmation" name="password_confirmation" type="password" required
+                        <input id="password_confirmation" x-model="passwordConfirmation" name="password_confirmation" type="password" required minlength="6"
                                placeholder="Ulangi kata sandi"
                                class="w-full bg-slate-50 focus:bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-brand-500 transition">
                     </div>
                 </div>
 
                 <div class="pt-2">
-                    <button type="submit" 
-                            class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-xs transition hover:shadow flex items-center justify-center gap-2">
+                    <button type="submit"
+                            :disabled="loading || !firebaseConfigured"
+                            class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-xs transition hover:shadow flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-user-plus text-xs"></i>
-                        <span>Daftar & Masuk</span>
+                        <span x-show="!loading">Daftar & Masuk</span>
+                        <span x-show="loading" x-cloak class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...
+                        </span>
                     </button>
                 </div>
             </form>
 
             <!-- Bottom Login Link -->
             <div class="text-center pt-2 text-xs text-slate-600 border-t border-slate-100">
-                Sudah punya akun? 
+                Sudah punya akun?
                 <a href="{{ route('login') }}" class="font-bold text-brand-600 hover:text-brand-700">Masuk di sini</a>
             </div>
 
         </div>
     </div>
+
+    <!-- Firebase JS SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    @php
+        $firebaseWebConfig = [
+            'apiKey' => config('firebase_web.api_key'),
+            'authDomain' => config('firebase_web.auth_domain'),
+            'projectId' => config('firebase_web.project_id'),
+            'storageBucket' => config('firebase_web.storage_bucket'),
+            'messagingSenderId' => config('firebase_web.messaging_sender_id'),
+            'appId' => config('firebase_web.app_id'),
+        ];
+    @endphp
+    <script>
+        // Konfigurasi Firebase Web App diambil dari config/firebase_web.php (.env)
+        const firebaseConfig = @json($firebaseWebConfig);
+        const firebaseConfigured = @json(config('firebase_web.configured'));
+        const firebaseLoginUrl = @json(route('auth.firebase'));
+        const csrfToken = @json(csrf_token());
+
+        if (firebaseConfigured) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const fbAuth = firebaseConfigured ? firebase.auth() : null;
+
+        // Terjemahan error Firebase Auth ke Bahasa Indonesia
+        function firebaseErrorMessage(error) {
+            const messages = {
+                'auth/popup-closed-by-user': 'Jendela pendaftaran Google ditutup sebelum selesai.',
+                'auth/popup-blocked': 'Popup diblokir browser. Izinkan popup lalu coba lagi.',
+                'auth/email-already-in-use': 'Email sudah terdaftar. Silakan masuk melalui halaman login.',
+                'auth/invalid-email': 'Format email tidak valid.',
+                'auth/weak-password': 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.',
+                'auth/network-request-failed': 'Koneksi internet bermasalah. Periksa jaringan Anda.',
+            };
+            return messages[error?.code] || ('Pendaftaran gagal: ' + (error?.message || 'terjadi kesalahan tak terduga.'));
+        }
+
+        // Kirim ID Token ke backend Laravel untuk diverifikasi & memulai sesi
+        function submitFirebaseToken(idToken) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = firebaseLoginUrl;
+
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = '_token';
+            csrf.value = csrfToken;
+            form.appendChild(csrf);
+
+            const token = document.createElement('input');
+            token.type = 'hidden';
+            token.name = 'id_token';
+            token.value = idToken;
+            form.appendChild(token);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Inisialisasi state Alpine setelah SDK dimuat
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('registerPage', () => ({
+                loading: false,
+                firebaseError: null,
+                name: '',
+                email: '',
+                password: '',
+                passwordConfirmation: '',
+
+                async signUpWithGoogle() {
+                    this.firebaseError = null;
+                    this.loading = true;
+                    try {
+                        const provider = new firebase.auth.GoogleAuthProvider();
+                        const result = await fbAuth.signInWithPopup(provider);
+                        const idToken = await result.user.getIdToken();
+                        submitFirebaseToken(idToken); // halaman akan pindah ke backend
+                    } catch (error) {
+                        this.firebaseError = firebaseErrorMessage(error);
+                        this.loading = false;
+                    }
+                },
+
+                async signUpWithEmail() {
+                    this.firebaseError = null;
+
+                    if (this.password !== this.passwordConfirmation) {
+                        this.firebaseError = 'Konfirmasi kata sandi tidak cocok.';
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        const result = await fbAuth.createUserWithEmailAndPassword(this.email, this.password);
+                        // Simpan nama lengkap ke profil Firebase agar terbawa ke database
+                        await result.user.updateProfile({ displayName: this.name });
+                        const idToken = await result.user.getIdToken(true);
+                        submitFirebaseToken(idToken);
+                    } catch (error) {
+                        this.firebaseError = firebaseErrorMessage(error);
+                        this.loading = false;
+                    }
+                },
+            }));
+        });
+    </script>
 </body>
 </html>

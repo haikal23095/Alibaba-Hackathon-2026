@@ -3,116 +3,106 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 
 class AuthController extends Controller
 {
-    /**
-     * Show login form.
-     */
+    protected $auth;
+
+    // Dependency Injection untuk Firebase Auth (Admin SDK)
+    public function __construct(FirebaseAuth $auth)
+    {
+        $this->auth = $auth;
+    }
+
+    // Menampilkan halaman login
     public function showLogin()
     {
-        if (Auth::check()) {
-            return redirect('/');
-        }
-
-        $dummyUsers = User::all();
-        return view('auth.login', compact('dummyUsers'));
+        return view('auth.login');
     }
 
-    /**
-     * Handle user login.
-     */
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-
-        $remember = $request->boolean('remember');
-
-        if (Auth::attempt($credentials, $remember)) {
-            $request->session()->regenerate();
-            return redirect()->intended('/')->with('success', 'Selamat datang kembali, ' . Auth::user()->name . '!');
-        }
-
-        return back()->withErrors([
-            'email' => 'Kombinasi email dan password yang Anda masukkan tidak sesuai.',
-        ])->onlyInput('email');
-    }
-
-    /**
-     * Google Sign-In redirect / handler.
-     */
-    public function googleLogin(Request $request)
-    {
-        // Default to Zakaria MP or chosen user ID
-        $userId = $request->query('user_id', 1);
-        $user = User::find($userId);
-
-        if (!$user) {
-            $user = User::firstOrCreate(
-                ['email' => 'zakariamp@gmail.com'],
-                [
-                    'name' => 'Zakaria MP',
-                    'password' => Hash::make('password'),
-                ]
-            );
-        }
-
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        return redirect('/')->with('success', 'Berhasil masuk dengan Google sebagai ' . $user->name);
-    }
-
-    /**
-     * Show register form.
-     */
+    // Menampilkan halaman register
     public function showRegister()
     {
-        if (Auth::check()) {
-            return redirect('/');
-        }
-
         return view('auth.register');
     }
 
     /**
-     * Handle registration.
+     * Login universal via Firebase (Google Sign-In maupun Email/Password).
+     * Frontend mengirim ID Token dari Firebase JS SDK, backend memverifikasi
+     * token dengan Admin SDK lalu memulai sesi Laravel.
      */
-    public function register(Request $request)
+    public function loginWithFirebase(Request $request)
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        $request->validate([
+            'id_token' => 'required|string',
         ]);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        try {
+            // 1. Verifikasi ID Token dari Frontend ke Firebase
+            $verifiedIdToken = $this->auth->verifyIdToken($request->input('id_token'));
 
-        Auth::login($user);
-        $request->session()->regenerate();
+            // 2. Ambil data user dari token yang sudah tervalidasi
+            $uid = $verifiedIdToken->claims()->get('sub'); // Firebase UID
+            $email = $verifiedIdToken->claims()->get('email');
+            $name = $verifiedIdToken->claims()->get('name');
+            $avatar = $verifiedIdToken->claims()->get('picture');
 
-        return redirect('/')->with('success', 'Akun berhasil dibuat! Selamat datang di REBOUND, ' . $user->name);
+            // 3. Cari user di database, jika belum ada maka buat baru
+            $user = User::firstOrCreate(
+                ['firebase_uid' => $uid],
+                [
+                    'name' => $name ?: ($email ? explode('@', $email)[0] : 'Pengguna'),
+                    'email' => $email,
+                    'avatar_url' => $avatar,
+                ]
+            );
+
+            // Untuk request API (JSON), kembalikan token Sanctum
+            if ($request->expectsJson()) {
+                $token = $user->createToken('rebound-auth-token')->plainTextToken;
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Berhasil login via Firebase.',
+                    'data' => [
+                        'user' => $user,
+                        'access_token' => $token,
+                    ],
+                ], 200);
+            }
+
+            // 4. Untuk web: mulai sesi Laravel lalu arahkan ke dashboard
+            Auth::login($user, remember: true);
+            $request->session()->regenerate();
+
+            return redirect()->intended('/');
+
+        } catch (Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Token tidak valid atau kadaluarsa.',
+                    'error' => $e->getMessage(),
+                ], 401);
+            }
+
+            return back()->withErrors([
+                'firebase' => 'Login gagal: token Firebase tidak valid atau kadaluarsa. Silakan coba lagi.',
+            ]);
+        }
     }
 
-    /**
-     * Handle logout.
-     */
+    // Logout: akhiri sesi Laravel
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login')->with('info', 'Anda telah berhasil keluar.');
+        return redirect()->route('login');
     }
 }
