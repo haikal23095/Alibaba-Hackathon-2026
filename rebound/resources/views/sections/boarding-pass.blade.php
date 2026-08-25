@@ -1,6 +1,13 @@
+{{-- #BACKEND Komponen E-Boarding Pass Digital / Ultra-Compact Aviation E-Boarding Pass
+     id: Menampilkan kartu Boarding Pass resmi IATA lengkap dengan barcode Code-128 (JsBarcode), QR code scannable, info gate/seat, bag tag, dan tombol download PDF & Mobile Wallet.
+         Seluruh data (penumpang, nomor tiket, nomor kursi, gate, barcode) harus di-generate dinamis dari database `bookings`, `tickets`, dan `flights`.
+     en: Displays official IATA compliant Boarding Pass card complete with Code-128 barcode (JsBarcode), scannable QR code, gate/seat info, bag tag, and PDF & Mobile Wallet download buttons.
+         All data (passenger, ticket number, seat, gate, barcode) must be dynamically generated from `bookings`, `tickets`, and `flights` database tables. --}}
 <!-- Ultra-Compact Aviation E-Boarding Pass (Zoom-Out Fitted Layout with Real Scannable QR & Dual Downloads) -->
 <div class="w-full bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden text-[10px] relative select-none">
     
+    {{-- id: Header Maskapai (Warna Garuda Indonesia / Singapore Airlines)
+         en: Airline Header Bar (Garuda Indonesia / Singapore Airlines Theme) --}}
     <!-- Top Airline Color Bar (Garuda Navy/Teal) -->
     <div class="bg-gradient-to-r from-[#0B3B60] to-[#0A548A] text-white py-1.5 px-2.5 flex items-center justify-between">
         <div class="flex items-center gap-1.5">
@@ -18,6 +25,8 @@
         </span>
     </div>
 
+    {{-- id: Bodi Utama Boarding Pass (Rute, Gate, Boarding Time, Kursi, Zone, Bag Tag)
+         en: Main Boarding Pass Body (Route, Gate, Boarding Time, Seat, Zone, Bag Tag) --}}
     <!-- Main Boarding Body (Ultra Compact) -->
     <div class="p-2 space-y-1.5 bg-white">
         
@@ -47,6 +56,8 @@
             </div>
         </div>
 
+        {{-- id: Grid 4 Kolom Telemetri Boarding (Gate, Boarding Time, Seat, Zone)
+             en: 4-Column Boarding Telemetry Grid (Gate, Boarding Time, Seat, Zone) --}}
         <!-- 4-Column Boarding Telemetry Grid (Fitted) -->
         <div class="grid grid-cols-4 gap-0.5 p-1 bg-slate-50 rounded-md border border-slate-100 text-center">
             <!-- Gate -->
@@ -71,6 +82,8 @@
             </div>
         </div>
 
+        {{-- id: Indikator jaminan pengalihan bagasi otomatis
+             en: Automatic baggage transfer continuity indicator --}}
         <!-- Baggage Transfer Guarantee Indicator -->
         <div class="flex items-center justify-between px-1.5 py-0.5 bg-emerald-50/80 border border-emerald-200/60 rounded text-[8.5px]">
             <div class="flex items-center gap-1 text-emerald-800 font-semibold truncate">
@@ -81,6 +94,8 @@
         </div>
     </div>
 
+    {{-- id: Garis Sobekan Tiket Fisik (Perforated Tear-off Effect)
+         en: Perforated Tear-off Cutout Line Styling --}}
     <!-- ================= PERFORATED TEAR-OFF LINE ================= -->
     <div class="relative w-full py-0 bg-white flex items-center justify-center">
         <!-- Left Notch Cutout -->
@@ -91,6 +106,8 @@
         <div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-[#F8FAFC] rounded-full border-l border-slate-200"></div>
     </div>
 
+    {{-- id: Bagian Bawah Sobekan (Info Penumpang, PNR, Barcode 1D & QR Code 2D)
+         en: Lower Stub Area (Passenger Info, PNR, 1D Barcode & 2D QR Code) --}}
     <!-- Lower Stub (Passenger Info, E-Ticket & Barcode) -->
     <div class="p-2 pt-1 bg-white space-y-1.5">
         
@@ -112,6 +129,9 @@
             <span class="font-bold text-emerald-600" x-text="lang === 'id' ? 'Rp 0 (Bebas Biaya / Waiver 72A)' : '$0 (Disruption Waiver 72A)'"></span>
         </div>
 
+        {{-- #BACKEND Barcode 1D Code-128 & QR Code
+             id: Barcode dirender oleh JsBarcode via renderBarcode(). QR code scannable untuk airport gate.
+             en: Barcode rendered by JsBarcode via renderBarcode(). QR code scannable for airport gate. --}}
         <!-- Real Scannable Barcode & Real Scannable QR Code -->
         <div class="flex items-center justify-between gap-1.5 pt-0.5 border-t border-slate-100">
             <!-- REAL 100% SCANNABLE CODE-128 BARCODE (JsBarcode & Airport Scanner Ready) -->
@@ -129,6 +149,9 @@
             </div>
         </div>
 
+        {{-- #BACKEND Aksi Unduh PDF & Simpan ke Mobile Wallet
+             id: downloadPdf() memicu cetak/unduh PDF. showWalletModal memunculkan modal Apple/Google Wallet.
+             en: downloadPdf() triggers PDF print/download. showWalletModal opens Apple/Google Wallet modal. --}}
         <!-- DUAL DISTINCT ACTIONS: PDF TICKET & DIGITAL WALLET (ANDROID / IOS) -->
         <div class="grid grid-cols-2 gap-1.5 pt-0.5">
             <!-- 1. Download Official PDF Ticket -->

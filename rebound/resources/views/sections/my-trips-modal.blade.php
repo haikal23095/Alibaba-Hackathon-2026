@@ -1,3 +1,8 @@
+{{-- #BACKEND Modal Daftar Perjalanan Saya / My Trips Modal
+     id: Menampilkan daftar seluruh tiket & perjalanan yang dimiliki oleh user yang sedang login.
+         Di backend: query tabel `bookings` WHERE `user_id` = Auth::id() ORDER BY `departure_date` DESC.
+     en: Displays all tickets & trips owned by the currently authenticated user.
+         In backend: query `bookings` table WHERE `user_id` = Auth::id() ORDER BY `departure_date` DESC. --}}
 <!-- My Trips Modal Backdrop & Dialog -->
 <div x-show="showMyTripsModal" 
      x-cloak
@@ -18,6 +23,8 @@
          x-transition:leave-start="opacity-100 scale-100"
          x-transition:leave-end="opacity-0 scale-95">
         
+        {{-- id: Header Modal Perjalanan Saya
+             en: My Trips Modal Header --}}
         <!-- Header -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
             <div class="flex items-center gap-2.5">
@@ -38,8 +45,13 @@
             </button>
         </div>
 
+        {{-- #BACKEND Daftar Tiket Perjalanan User
+             id: Item tiket di bawah saat ini hardcoded. Di backend: loop dari collection $bookings.
+             en: Ticket items below are currently hardcoded. In backend: loop from $bookings collection. --}}
         <!-- Trip Cards List -->
         <div class="space-y-2">
+            {{-- id: Tiket Aktif (GA826)
+                 en: Active Trip Item (GA826) --}}
             <!-- Active Trip Item -->
             <div @click="showMyTripsModal = false; selectTicket('GA826')"
                  class="p-3 rounded-lg border-2 border-brand-500 bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer transition flex items-center justify-between shadow-2xs">
@@ -54,6 +66,8 @@
                 <i class="fa-solid fa-chevron-right text-xs text-brand-600"></i>
             </div>
 
+            {{-- id: Tiket Mendatang (SQ638)
+                 en: Future Trip Item (SQ638) --}}
             <!-- Future Trip Item -->
             <div @click="showMyTripsModal = false; selectTicket('SQ638')"
                  class="p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition flex items-center justify-between shadow-2xs">
@@ -69,6 +83,8 @@
             </div>
         </div>
 
+        {{-- id: Tombol Aksi (Tambah Tiket Baru & Tutup)
+             en: Action Buttons (Add New Ticket & Close) --}}
         <!-- Action buttons -->
         <div class="pt-2 space-y-1.5">
             <button @click="showMyTripsModal = false; hasSetupPnr = false"

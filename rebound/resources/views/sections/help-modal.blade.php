@@ -1,3 +1,6 @@
+{{-- #BACKEND Modal Pusat Bantuan & FAQ Penumpang / Help & Aviation FAQ Guide Modal
+     id: Menampilkan panduan regulasi aviasi (PM 89/2015, Waiver 72A), FAQ rebooking cerdas, dan kontak darurat maskapai.
+     en: Displays aviation regulation guide (PM 89/2015, Waiver 72A), smart rebooking FAQ, and airline emergency contact. --}}
 <!-- Help & Aviation FAQ Guide Modal -->
 <div x-show="showHelpModal" 
      x-cloak
@@ -15,6 +18,8 @@
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
         
+        {{-- id: Header modal bantuan
+             en: Help modal header --}}
         <!-- Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div class="flex items-center gap-3">
@@ -35,9 +40,13 @@
             </button>
         </div>
 
+        {{-- id: Daftar Item Pertanyaan Umum (FAQ)
+             en: Frequently Asked Questions (FAQ) List --}}
         <!-- FAQ Items Accordion / Cards -->
         <div class="space-y-2.5 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1 text-xs">
             
+            {{-- id: FAQ 1: Cara kerja rebooking cerdas REBOUND
+                 en: FAQ 1: How REBOUND Smart Rebooking works --}}
             <!-- FAQ 1: How Rebooking Works -->
             <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1">
                 <div class="flex items-center gap-2 font-bold text-slate-900">
@@ -48,6 +57,8 @@
                    x-text="lang === 'id' ? 'Sistem REBOUND terhubung langsung ke GDS maskapai penerbangan. Ketika terjadi keterlambatan atau pembatalan, AI secara otomatis mencarikan rute tercepat yang tersedia dan mengalihkan kursi Anda tanpa perlu antre di loket bandara.' : 'REBOUND links directly to airline GDS systems. When delays or cancellations occur, AI instantly computes the fastest alternative flight and rebooks your seat without waiting at airport counters.'"></p>
             </div>
 
+            {{-- id: FAQ 2: Penjelasan klausul bebas biaya (Waiver 72A & PM 89/2015)
+                 en: FAQ 2: Zero fee waiver policy explanation (Waiver 72A & PM 89/2015) --}}
             <!-- FAQ 2: Zero Fee Waiver Policy -->
             <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1">
                 <div class="flex items-center gap-2 font-bold text-slate-900">
@@ -58,6 +69,8 @@
                    x-text="lang === 'id' ? 'Tidak ada biaya sama sekali (Rp 0). Berdasarkan regulasi Permenhub PM 89/2015 dan Klausul Disruption Waiver Rule 72A, seluruh penalti perubahan dibebaskan 100% saat penerbangan terganggu oleh maskapai/cuaca.' : 'Zero fee ($0). Under Aviation Tariff Disruption Rules (Waiver 72A) and Passenger Protection Regulations, 100% of rebooking fees and fare differences are fully waived.'"></p>
             </div>
 
+            {{-- id: FAQ 3: Pengalihan bagasi otomatis ke pesawat baru
+                 en: FAQ 3: Automatic baggage transfer to new aircraft --}}
             <!-- FAQ 3: Baggage Continuity -->
             <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200/80 space-y-1">
                 <div class="flex items-center gap-2 font-bold text-slate-900">
@@ -68,6 +81,8 @@
                    x-text="lang === 'id' ? 'Tag bagasi Anda (misal #GA-489102) akan secara otomatis diperbarui di sistem penanganan bagasi ground handler bandara dan dipindahkan ke pesawat baru.' : 'Your baggage tag (#GA-489102) is automatically updated across airport ground handling systems and redirected to your new aircraft.'"></p>
             </div>
 
+            {{-- id: Kotak kontak darurat operasional maskapai
+                 en: Airline emergency operations contact box --}}
             <!-- Emergency Dispatch Contact Box -->
             <div class="p-3 rounded-lg bg-blue-50 border border-brand-200 text-[11px] flex items-center justify-between">
                 <div class="flex items-center gap-2 text-brand-900">
@@ -84,6 +99,8 @@
 
         </div>
 
+        {{-- id: Tombol tutup panduan
+             en: Close guide button --}}
         <!-- Footer -->
         <div class="pt-2 flex justify-end">
             <button @click="showHelpModal = false" 

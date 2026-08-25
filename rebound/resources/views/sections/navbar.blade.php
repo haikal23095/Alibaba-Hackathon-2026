@@ -1,3 +1,7 @@
+{{-- id: Navbar utama \u2014 berisi logo REBOUND, tombol sidebar, navigasi desktop, pemilih bahasa (ID/EN), notifikasi, profil user
+     en: Main navbar \u2014 contains REBOUND logo, sidebar toggle, desktop navigation, language picker (ID/EN), notifications, user profile
+     #BACKEND id: Data profil user (nama, inisial, email) diambil dari currentUser yang sudah dari Auth. Notifikasi harus dari database notifications.
+     #BACKEND en: User profile data (name, initials, email) from currentUser already from Auth. Notifications must come from notifications database. --}}
 <header class="h-[64px] sm:h-[56px] pt-2.5 sm:pt-0 bg-white border-b border-[#E2E8F0] px-3.5 sm:px-5 md:px-6 flex items-center justify-between z-30 shrink-0 select-none relative">
     
     <!-- LEFT: Logo -->

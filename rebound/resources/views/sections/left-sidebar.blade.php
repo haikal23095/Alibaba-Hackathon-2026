@@ -1,6 +1,13 @@
+{{-- #BACKEND Sidebar Kiri Riwayat & Manajemen Tiket / Left Sidebar: Ticket History & Management
+     id: Sidebar kiri menampilkan daftar seluruh tiket penerbangan yang dipantau (aktif, bulan ini, riwayat selesai).
+         Di backend: data harus di-query dari tabel `bookings` & `flights` milik pengguna yang sedang login (Auth::id()).
+     en: Left sidebar displays list of all tracked flight tickets (active monitoring, this month, past completed).
+         In backend: data must be queried from `bookings` & `flights` tables belonging to authenticated user (Auth::id()). --}}
 <!-- Left Sidebar: Riwayat Tiket (Figma Light Theme Consistency) -->
 <aside class="w-full lg:w-64 xl:w-72 bg-white text-slate-800 border-r border-[#E2E8F0] flex flex-col h-full shrink-0 z-30 select-none text-xs shadow-xs pb-16 lg:pb-0">
     
+    {{-- id: Header Aksi Atas: Tombol Tambah Tiket PNR, Collapse Sidebar, & Pencarian Tiket
+         en: Top Action Header: Add PNR Ticket Button, Sidebar Collapse, & Ticket Search Input --}}
     <!-- Top Action: Add / Monitor New Ticket & Collapse Button -->
     <div class="p-3 border-b border-slate-100 space-y-2">
         <div class="flex items-center gap-1.5">
@@ -26,9 +33,13 @@
         </div>
     </div>
 
+    {{-- id: Container Daftar Riwayat Tiket
+         en: Ticket History List Container --}}
     <!-- Ticket History List (Clean Enterprise Style) -->
     <div class="flex-1 overflow-y-auto px-2 py-2 space-y-3">
         
+        {{-- id: Kategori 1: Penerbangan yang Sedang Aktif Dipantau
+             en: Category 1: Actively Monitored Flights --}}
         <!-- Category 1: Sedang Dipantau (Active) -->
         <div>
             <div class="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
@@ -37,10 +48,13 @@
             </div>
 
             <div class="space-y-1">
+                {{-- #BACKEND Ticket 1 — Data statis GA826
+                     id: Nomor penerbangan, rute, PNR, tanggal, status delay harus dari DB: bookings.flight_number, bookings.pnr, flights.status
+                     en: Flight number, route, PNR, date, delay status must be from DB: bookings.flight_number, bookings.pnr, flights.status --}}
                 <!-- Ticket 1 (Current Active) -->
                 <button @click="selectTicket('GA826')"
                         :class="selectedTicketId === 'GA826' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group">
+                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
                     <div class="flex items-center justify-between">
                         <span class="font-bold flex items-center gap-1.5 text-slate-900 text-xs">
                             <i class="fa-solid fa-plane-departure text-brand-600 text-[10px]"></i>
@@ -60,16 +74,21 @@
             </div>
         </div>
 
+        {{-- id: Kategori 2: Tiket Bulan Ini
+             en: Category 2: This Month's Upcoming Tickets --}}
         <!-- Category 2: Bulan Ini (This Month) -->
         <div>
             <div class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400"
                  x-text="lang === 'id' ? 'Bulan Ini' : 'This Month'"></div>
 
             <div class="space-y-1">
+                {{-- #BACKEND Ticket 2 — Data statis SQ951
+                     id: Semua data tiket ini statis — harus dari tabel bookings di database
+                     en: All ticket data is static — must be from bookings table in database --}}
                 <!-- Ticket 2: SQ951 (From Boarding Pass Photo) -->
                 <button @click="selectTicket('SQ951')"
                         :class="selectedTicketId === 'SQ951' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group">
+                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
                     <div class="flex items-center justify-between">
                         <span class="font-medium flex items-center gap-1.5 text-slate-800 text-xs">
                             <i class="fa-solid fa-plane text-brand-600 text-[10px]"></i>
@@ -87,10 +106,11 @@
                     </div>
                 </button>
 
+                {{-- #BACKEND Ticket 3 — Data statis SQ638 --}}
                 <!-- Ticket 3: SQ638 -->
                 <button @click="selectTicket('SQ638')"
                         :class="selectedTicketId === 'SQ638' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group">
+                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
                     <div class="flex items-center justify-between">
                         <span class="font-medium flex items-center gap-1.5 text-slate-800 text-xs">
                             <i class="fa-solid fa-plane text-slate-400 text-[10px]"></i>
@@ -110,6 +130,9 @@
             </div>
         </div>
 
+        {{-- #BACKEND Riwayat Sebelumnya
+             id: Trip sebelumnya harus dari DB: bookings WHERE status = 'completed' ORDER BY departure_date DESC
+             en: Past trips must be from DB: bookings WHERE status = 'completed' ORDER BY departure_date DESC --}}
         <!-- Category 3: Riwayat Sebelumnya (Past Trips) -->
         <div>
             <div class="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400"
@@ -119,7 +142,7 @@
                 <!-- Ticket 3 -->
                 <button @click="selectTicket('QZ502')"
                         :class="selectedTicketId === 'QZ502' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/70 opacity-85 hover:opacity-100'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs">
+                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs cursor-pointer">
                     <div class="flex items-center justify-between">
                         <span class="font-medium flex items-center gap-1.5 text-slate-700 text-xs">
                             <i class="fa-solid fa-check text-slate-400 text-[10px]"></i>
@@ -138,7 +161,7 @@
                 <!-- Ticket 4 -->
                 <button @click="selectTicket('JT028')"
                         :class="selectedTicketId === 'JT028' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/70 opacity-85 hover:opacity-100'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs">
+                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs cursor-pointer">
                     <div class="flex items-center justify-between">
                         <span class="font-medium flex items-center gap-1.5 text-slate-700 text-xs">
                             <i class="fa-solid fa-check text-slate-400 text-[10px]"></i>
@@ -158,6 +181,9 @@
 
     </div>
 
+    {{-- #BACKEND Bar Profil Pengguna di Bawah Sidebar
+         id: Data profil user (nama, inisial, email) diambil dari currentUser yang sudah sinkron dengan Auth::user().
+         en: User profile bar data (name, initials, email) taken from currentUser synced with Auth::user(). --}}
     <!-- Bottom User Bar (Dynamic Current User) -->
     <div class="p-2.5 border-t border-slate-100 flex items-center justify-between bg-slate-50/80">
         <button @click="showUserDropdown = !showUserDropdown"

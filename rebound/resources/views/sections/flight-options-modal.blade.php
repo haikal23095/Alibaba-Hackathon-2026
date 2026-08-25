@@ -1,3 +1,10 @@
+{{-- #BACKEND Modal Daftar Jadwal Penerbangan Alternatif / Multi-Flight Alternative Options Modal (GDS Atlas)
+     id: Menampilkan daftar penerbangan alternatif dari jaringan GDS Atlas.
+         Saat ini data di-loop dari `alternativeFlightsList` di `app.blade.php`.
+         Di backend: ambil dari endpoint GET /api/flights/alternatives?route=CGK-SIN&date=2026-11-30.
+     en: Displays alternative flight schedule list from GDS Atlas network.
+         Currently looped from `alternativeFlightsList` in `app.blade.php`.
+         In backend: fetch from endpoint GET /api/flights/alternatives?route=CGK-SIN&date=2026-11-30. --}}
 <!-- Multi-Flight Alternative Options Modal (GDS Atlas Airline Network) -->
 <div x-show="showFlightOptionsModal" 
      x-cloak
@@ -15,6 +22,8 @@
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
         
+        {{-- id: Header Modal Opsi Alternatif
+             en: Alternative Options Modal Header --}}
         <!-- Header -->
         <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <div>
@@ -32,6 +41,9 @@
             </button>
         </div>
 
+        {{-- #BACKEND Loop Daftar Penerbangan Alternatif GDS
+             id: Di-loop menggunakan Alpine x-for. Setiap item berisi: flightNumber, airline, aircraft, gate, depTime, arrTime, seatsAvailable.
+             en: Looped using Alpine x-for. Each item contains: flightNumber, airline, aircraft, gate, depTime, arrTime, seatsAvailable. --}}
         <!-- Flight Options List -->
         <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1 text-xs custom-scrollbar">
             
@@ -39,6 +51,8 @@
                 <div class="p-3 rounded-lg border transition hover:border-brand-400 hover:shadow-xs bg-white space-y-2"
                      :class="altFlight.isRecommended ? 'border-brand-300 bg-blue-50/20' : 'border-slate-200'">
                     
+                    {{-- id: Header maskapai, aircraft, nomor gate, dan badge rekomendasi / ketersediaan kursi
+                         en: Airline header, aircraft, gate number, and recommendation / seat availability badge --}}
                     <!-- Airline & Badges -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
@@ -65,6 +79,8 @@
                         </div>
                     </div>
 
+                    {{-- id: Timeline rute jadwal (Waktu berangkat & tiba)
+                         en: Route schedule timeline (Departure & arrival times) --}}
                     <!-- Schedule Route Line -->
                     <div class="p-2 bg-slate-50 rounded-md border border-slate-100 flex items-center justify-between">
                         <div class="text-left">
@@ -88,6 +104,9 @@
                         </div>
                     </div>
 
+                    {{-- #BACKEND Tombol Pilih Penerbangan Ini
+                         id: selectCustomAlternative(altFlight) mengupdate `flight.alternative` & menjalankan proses rebooking
+                         en: selectCustomAlternative(altFlight) updates `flight.alternative` & triggers rebooking process --}}
                     <!-- Rebook CTA -->
                     <div class="flex items-center justify-between pt-1">
                         <div class="text-[10.5px] text-emerald-700 font-semibold flex items-center gap-1">
@@ -107,6 +126,8 @@
 
         </div>
 
+        {{-- id: Footer modal dengan status sinkronisasi database GDS
+             en: Modal footer with GDS database sync status --}}
         <!-- Footer -->
         <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
             <span class="text-[10.5px] text-slate-400">

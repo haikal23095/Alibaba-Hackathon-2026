@@ -1,3 +1,6 @@
+{{-- #BACKEND Kartu Kebijakan Tiket
+     id: Data kebijakan tiket (ubah jadwal, biaya, selisih tarif) masih statis dari flight.original \u2014 harus dari database fare_rules berdasarkan PNR/booking
+     en: Ticket policy data (change allowed, fees, fare diff) is still static from flight.original \u2014 must be from fare_rules database based on PNR/booking --}}
 <!-- In-Chat Verified Ticket Rules Card (Figma Node 22:1109) -->
 <div class="w-full bg-white rounded-lg border border-slate-200 p-4 shadow-xs my-3 text-left space-y-3">
     

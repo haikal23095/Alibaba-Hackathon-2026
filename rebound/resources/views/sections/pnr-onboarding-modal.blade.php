@@ -1,3 +1,9 @@
+{{-- #BACKEND Verifikasi PNR Wajib & Pemindai Barcode / Mandatory PNR Verification & Barcode Scanner Modal
+     id: Modal aktivasi tiket pertama kali. Mengharuskan pengguna menginput kode PNR atau memindai barcode/foto boarding pass.
+         Data validasi PNR harus diverifikasi ke API backend `POST /api/pnr/verify` dan dicocokkan ke database `bookings` serta GDS maskapai.
+         
+     en: Mandatory initial ticket activation modal. Requires users to input a PNR booking code or scan a physical boarding pass barcode/photo.
+         PNR validation must be verified against backend API `POST /api/pnr/verify` and checked against `bookings` database and airline GDS. --}}
 <!-- Mandatory PNR Verification & Barcode Scanner Modal -->
 <div x-show="!hasSetupPnr || showAddTicketModal" 
      x-cloak
@@ -11,6 +17,8 @@
     
     <div class="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 text-left relative overflow-hidden space-y-3.5"
          x-data="{
+             // id: State lokal untuk modal PNR
+             // en: Local state for PNR onboarding modal
              scanMode: 'input', // 'input', 'camera', 'upload'
              pnrInput: '',
              passengerInput: '',
@@ -22,11 +30,15 @@
              isShaking: false,
              uploadedImagePreview: null,
 
+             // id: clearError() — Mereset pesan error validasi PNR
+             // en: clearError() — Resets PNR validation error message
              clearError() {
                  this.errorMessage = null;
                  this.errorTitle = null;
              },
 
+             // id: triggerError(title, msg) — Menampilkan banner error dan animasi getar pada input
+             // en: triggerError(title, msg) — Displays error banner and triggers shake animation on inputs
              triggerError(title, msg) {
                  this.errorTitle = title;
                  this.errorMessage = msg;
@@ -34,6 +46,10 @@
                  setTimeout(() => { this.isShaking = false; }, 400);
              },
 
+             // id: startCamera() — Mengaktifkan kamera pengguna untuk memindai barcode fisik secara live
+             // en: startCamera() — Starts user camera feed to live-scan physical barcode
+             // #BACKEND id: Di produksi: integrasikan library ZXing / BarcodeDetector API untuk decode IATA BCBP
+             // #BACKEND en: In production: integrate ZXing / BarcodeDetector API to decode standard IATA BCBP
              startCamera() {
                  this.scanMode = 'camera';
                  this.clearError();
@@ -53,6 +69,10 @@
                  }
              },
 
+             // id: handleImageUpload(e) — Membaca file gambar foto boarding pass yang diunggah pengguna
+             // en: handleImageUpload(e) — Reads uploaded boarding pass image file
+             // #BACKEND id: Unggah gambar ke backend POST /api/pnr/scan-image untuk OCR/Barcode decoding otomatis
+             // #BACKEND en: Upload image to backend POST /api/pnr/scan-image for automated OCR/Barcode decoding
              handleImageUpload(e) {
                  const file = e.target.files && e.target.files[0];
                  if (!file) return;
@@ -64,7 +84,8 @@
                      setTimeout(() => {
                          this.isVerifying = false;
                          this.scanSuccess = true;
-                         // Detect Singapore Airlines SQ951 Boarding Pass from User's Ticket
+                         // id: Simulasi deteksi tiket Singapore Airlines SQ951 dari foto boarding pass pengguna
+                         // en: Simulated detection of Singapore Airlines SQ951 ticket from user boarding pass photo
                          this.pnrInput = 'SQ-951A';
                          this.passengerInput = 'ISTIQOMAH ASSYFA OCTAVIYANI MRS';
                          setTimeout(() => {
@@ -75,6 +96,8 @@
                  reader.readAsDataURL(file);
              },
 
+             // id: scanSimulated(pnrCode, paxName, flightId) — Helper untuk uji coba cepat pemindaian barcode
+             // en: scanSimulated(pnrCode, paxName, flightId) — Helper for quick simulated barcode scanning tests
              scanSimulated(pnrCode, paxName, flightId) {
                  this.clearError();
                  this.isVerifying = true;
@@ -89,6 +112,10 @@
                  }, 800);
              },
 
+             // id: submitPnr(forcedFlightId) — Memvalidasi dan mengaktifkan tiket berdasarkan PNR yang diinput
+             // en: submitPnr(forcedFlightId) — Validates and activates ticket based on provided PNR code
+             // #BACKEND id: Panggil API backend POST /api/pnr/verify dengan body { pnr: pnrInput, passenger: passengerInput }
+             // #BACKEND en: Call backend API POST /api/pnr/verify with body { pnr: pnrInput, passenger: passengerInput }
              submitPnr(forcedFlightId = null) {
                  this.clearError();
                  const pnr = (this.pnrInput || '').trim().toUpperCase();
@@ -103,7 +130,8 @@
                  setTimeout(() => {
                      this.isVerifying = false;
 
-                     // PNR Recognition & GDS Atlas Validation
+                     // id: Validasi PNR ke database/GDS. Di produksi digantikan respons API backend
+                     // en: PNR validation against DB/GDS. In production replaced by backend API response
                      if (forcedFlightId === 'SQ951' || pnr.includes('951') || pnr.includes('00050') || pnr.includes('00051') || pnr.includes('ISTIQOMAH') || pnr.includes('MAULANA') || pnr.includes('KFLY')) {
                          this.scanSuccess = true;
                          hasSetupPnr = true;
@@ -131,13 +159,16 @@
                          selectTicket('SQ638');
                          showToast(lang === 'id' ? 'Tiket SQ-4109B aktif!' : 'Ticket SQ-4109B active!');
                      } else {
-                         // Invalid / Unrecognized PNR
+                         // id: PNR tidak valid / tidak ditemukan di database
+                         // en: Invalid / Unrecognized PNR not found in database
                          this.triggerError('Informasi Tidak Ditemukan', 'Informasi tidak dapat diambil. Cek ulang kode PNR Anda.');
                      }
                  }, 400);
              }
          }">
 
+        {{-- id: Header Modal Aktivasi PNR
+             en: PNR Activation Modal Header --}}
         <!-- Header -->
         <div class="flex items-center justify-between pb-1">
             <div>

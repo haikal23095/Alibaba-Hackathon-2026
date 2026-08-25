@@ -1,5 +1,10 @@
+{{-- #BACKEND Kartu Konfirmasi Rebooking Berhasil / Flight Reschedule Success Card
+     id: Komponen kartu konfirmasi sukses setelah proses rebooking selesai di GDS & penerbitan e-ticket baru.
+     en: Success confirmation card component rendered after GDS rebooking process & new e-ticket issuance. --}}
 <!-- Flight Reschedule Success Card (Figma Node 25:1210) -->
 <div class="w-full bg-white rounded-lg border border-emerald-200 p-4 shadow-2xs my-3 text-left">
+    {{-- id: Header status sukses dengan centang hijau
+         en: Success status header with green checkmark --}}
     <!-- Top Status Header -->
     <div class="flex items-center justify-between gap-3 mb-1.5">
         <div class="flex items-center gap-2">
@@ -14,10 +19,14 @@
               x-text="lang === 'id' ? 'Selesai' : 'Completed'"></span>
     </div>
 
+    {{-- id: Deskripsi konfirmasi penerbitan tiket baru
+         en: Confirmation description for newly issued ticket --}}
     <!-- Confirmation Description -->
     <p class="text-xs text-slate-600 ml-8 mb-3"
        x-text="lang === 'id' ? 'Semuanya sudah siap. Tiket baru Anda telah diterbitkan.' : 'Everything is set. Your new e-ticket has been issued.'"></p>
 
+    {{-- id: Catatan pemantauan berkelanjutan oleh background task REBOUND
+         en: Continuous background monitoring notice by REBOUND --}}
     <!-- Bottom Monitoring Note -->
     <div class="pt-2 border-t border-slate-100 flex items-center gap-2 text-[11px] font-medium text-slate-600 ml-0.5">
         <i class="fa-solid fa-plane-departure text-slate-400"></i>

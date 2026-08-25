@@ -1,6 +1,13 @@
+{{-- #BACKEND Sidebar Kanan Detail Penerbangan & Boarding Pass / Right Workspace Sidebar
+     id: Sidebar kanan interaktif dengan 4 tab: Ringkasan (Overview), Aturan (Policy), Jadwal (Schedule), dan Resi (Receipts / Boarding Pass).
+         Seluruh data penerbangan (timeline, nomor penerbangan, kelas, status radar, aturan, perbandingan jadwal) harus diambil dari database `flights`, `bookings`, `fare_rules` & GDS API real-time.
+     en: Interactive right sidebar with 4 tabs: Overview, Policy, Schedule, and Receipts (Boarding Pass).
+         All flight data (timeline, flight number, cabin class, radar status, rules, schedule comparison) must be fetched from `flights`, `bookings`, `fare_rules` database & real-time GDS API. --}}
 <!-- Right Workspace Sidebar: Zoom-out & Compact Edition (Figma Nodes 3:342, 3:198, 21:1065, 25:1168) -->
 <aside class="w-full lg:w-[310px] xl:w-[330px] bg-white border-l border-slate-200 flex flex-col h-full overflow-y-auto shrink-0 z-20 text-xs pb-16 lg:pb-0">
     
+    {{-- id: Header Sidebar (Nomor Penerbangan & Status Badge)
+         en: Sidebar Header (Flight Number & Status Badge) --}}
     <!-- Sidebar Header (Compact) -->
     <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
         <div>
@@ -29,6 +36,8 @@
             </div>
         </div>
 
+        {{-- id: Menu Dropdown Aksi Penerbangan (Perbarui Radar, Salin PNR, Kelola Tiket, Unduh PDF, Aktifkan SMS Alert)
+             en: Flight Actions Context Dropdown Menu (Refresh Radar, Copy PNR, Manage Ticket, Download PDF, Enable SMS Alerts) --}}
         <!-- Flight Actions Context Menu Dropdown (Interactive) -->
         <div class="relative" x-data="{ flightMenuOpen: false }">
             <button @click="flightMenuOpen = !flightMenuOpen"
@@ -86,13 +95,15 @@
         </div>
     </div>
 
+    {{-- id: Baris Tab Navigasi Sidebar (Ringkasan, Aturan, Jadwal, Resi)
+         en: Sidebar Navigation Tabs (Overview, Policy, Schedule, Receipts) --}}
     <!-- Navigation Tabs (Compact) -->
     <div class="p-2.5 border-b border-slate-100">
         <div class="grid grid-cols-4 gap-1 bg-slate-100/90 p-0.5 rounded-lg text-[11px] font-semibold text-slate-600">
             <!-- Tab 1: Overview -->
             <button @click="activeSidebarTab = 'overview'"
                     :class="activeSidebarTab === 'overview' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'hover:text-slate-900'"
-                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5">
+                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5 cursor-pointer">
                 <i class="fa-regular fa-compass text-[10px]"></i>
                 <span class="truncate" x-text="lang === 'id' ? 'Ringkasan' : 'Overview'"></span>
             </button>
@@ -100,7 +111,7 @@
             <!-- Tab 2: Policy -->
             <button @click="activeSidebarTab = 'policy'"
                     :class="activeSidebarTab === 'policy' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'hover:text-slate-900'"
-                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5">
+                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5 cursor-pointer">
                 <i class="fa-solid fa-shield-halved text-[10px]"></i>
                 <span class="truncate" x-text="lang === 'id' ? 'Aturan' : 'Policy'"></span>
             </button>
@@ -108,7 +119,7 @@
             <!-- Tab 3: Schedule -->
             <button @click="activeSidebarTab = 'schedule'"
                     :class="activeSidebarTab === 'schedule' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'hover:text-slate-900'"
-                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5">
+                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5 cursor-pointer">
                 <i class="fa-regular fa-clock text-[10px]"></i>
                 <span class="truncate" x-text="lang === 'id' ? 'Jadwal' : 'Schedule'"></span>
             </button>
@@ -116,7 +127,7 @@
             <!-- Tab 4: Receipts -->
             <button @click="activeSidebarTab = 'receipts'"
                     :class="activeSidebarTab === 'receipts' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'hover:text-slate-900'"
-                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5">
+                    class="py-1.5 px-1 rounded-md transition text-center flex flex-col items-center gap-0.5 cursor-pointer">
                 <i class="fa-solid fa-receipt text-[10px]"></i>
                 <span class="truncate" x-text="lang === 'id' ? 'Resi' : 'Receipts'"></span>
             </button>
@@ -126,12 +137,15 @@
     <!-- Tab Content (Compact Zoom-out padding) -->
     <div class="p-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">
         
-        <!-- ================= TAB 1: OVERVIEW / RINGKASAN ================= -->
+        {{-- id: ================= TAB 1: OVERVIEW / RINGKASAN =================
+             en: ================= TAB 1: OVERVIEW / RINGKASAN ================= --}}
         <div x-show="activeSidebarTab === 'overview'" class="space-y-3">
             
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                  x-text="lang === 'id' ? 'DETAIL PERJALANAN' : 'TRIP DETAILS'"></div>
 
+            {{-- id: Kartu Detail Perjalanan & Timeline Rute
+                 en: Trip Details Card & Route Timeline --}}
             <!-- Trip Details Card (Figma Node 3:342, 3:198) -->
             <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-3">
                 <!-- Airline & Class -->
@@ -166,6 +180,8 @@
                 </div>
             </div>
 
+            {{-- id: Widget Pencarian Alternatif saat status delayed (Figma Node 21:1065)
+                 en: Alternative Search Widget when flight is delayed (Figma Node 21:1065) --}}
             <!-- Alternative Search Widget (Figma Node 21:1065) -->
             <div x-show="flightStatus === 'delayed'" class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-2.5">
                 <div class="flex items-center gap-2">
@@ -206,7 +222,8 @@
             @include('sections.ticket-policy')
         </div>
 
-        <!-- ================= TAB 2: POLICY / ATURAN TIKET ================= -->
+        {{-- id: ================= TAB 2: POLICY / ATURAN TIKET =================
+             en: ================= TAB 2: POLICY / ATURAN TIKET ================= --}}
         <div x-show="activeSidebarTab === 'policy'" class="space-y-3">
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                  x-text="lang === 'id' ? 'KEBIJAKAN MASKAPAI' : 'AIRLINE POLICY'"></div>
@@ -224,7 +241,8 @@
             </div>
         </div>
 
-        <!-- ================= TAB 3: SCHEDULE / JADWAL ================= -->
+        {{-- id: ================= TAB 3: SCHEDULE / JADWAL =================
+             en: ================= TAB 3: SCHEDULE / JADWAL ================= --}}
         <div x-show="activeSidebarTab === 'schedule'" class="space-y-3">
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                  x-text="lang === 'id' ? 'JADWAL & STATUS TERKINI' : 'SCHEDULE & LIVE STATUS'"></div>
@@ -253,7 +271,8 @@
             </div>
         </div>
 
-        <!-- ================= TAB 4: RECEIPTS / RESI ================= -->
+        {{-- id: ================= TAB 4: RECEIPTS / RESI & BOARDING PASS =================
+             en: ================= TAB 4: RECEIPTS / RESI & BOARDING PASS ================= --}}
         <div x-show="activeSidebarTab === 'receipts'" class="space-y-3">
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                  x-text="lang === 'id' ? 'E-BOARDING PASS & BUKTI RESMI' : 'E-BOARDING PASS & TICKET'"></div>

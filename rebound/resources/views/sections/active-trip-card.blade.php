@@ -1,6 +1,13 @@
+{{-- #BACKEND Kartu Status Perjalanan Aktif / Active Trip Status Card
+     id: Menampilkan kartu ringkasan status penerbangan aktif (rute, nomor penerbangan, badge status, waktu delay/tepat waktu, dan penyebab keterlambatan).
+         Di backend: data diambil real-time dari GDS webhook / flight tracking API + tabel `bookings` & `flights`.
+     en: Displays active flight status summary card (route, flight number, status badge, delayed/on-time status, and delay reasons).
+         In backend: data fetched real-time from GDS webhook / flight tracking API + `bookings` & `flights` tables. --}}
 <!-- Active Trip Status Card (Compact & Balanced, Figma Nodes 3:142, 14:693, 14:729, 14:656) -->
 <div class="w-full max-w-[620px] mx-auto mb-2 bg-white rounded-lg border border-slate-200 p-2.5 sm:p-3 shadow-2xs transition hover:border-slate-300">
     
+    {{-- id: Baris Atas: Rute Penerbangan & Badge Status Dinamis
+         en: Top Row: Flight Route & Dynamic Status Badge --}}
     <!-- Top Row: Flight Route & Status Badge -->
     <div class="flex items-center justify-between gap-2.5">
         <!-- Route & Airline Icon -->
@@ -20,6 +27,8 @@
             </div>
         </div>
 
+        {{-- id: Badge Status Dinamis (Tepat Waktu / Terlambat / Telah Dialihkan)
+             en: Dynamic Status Badge (On Time / Delayed / Rebooked) --}}
         <!-- Status Badge Dynamic -->
         <div>
             <!-- On Time Badge -->
@@ -48,6 +57,8 @@
         </div>
     </div>
 
+    {{-- id: Baris Bawah: Info Maskapai & Estimasi Waktu Berangkat
+         en: Bottom Row: Airline Info & Estimated Departure Timing --}}
     <!-- Bottom Row: Airline Info & Timing -->
     <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
         <!-- Airline & Flight No -->

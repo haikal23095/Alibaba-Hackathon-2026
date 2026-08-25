@@ -1,3 +1,6 @@
+{{-- #BACKEND Modal Pemilih Format Mobile Wallet / Universal Digital Wallet Selector Modal
+     id: Menyediakan 3 opsi penyimpanan tiket digital: Google Wallet (JWT Link), Apple Wallet (.pkpass), dan Galeri Foto (PNG).
+     en: Provides 3 digital pass saving options: Google Wallet (JWT Link), Apple Wallet (.pkpass), and Photo Gallery (PNG). --}}
 <!-- Universal Digital Wallet Selector Modal (Android Google Wallet + iOS Apple Wallet + Image) -->
 <div x-show="showWalletModal" 
      x-cloak
@@ -15,6 +18,8 @@
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
         
+        {{-- id: Header modal simpan ke dompet digital
+             en: Save to digital wallet modal header --}}
         <!-- Header -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
@@ -29,9 +34,14 @@
             </button>
         </div>
 
+        {{-- id: Opsi 3 Format Mobile Wallet
+             en: 3 Mobile Wallet Format Options --}}
         <!-- 3 Wallet Format Options -->
         <div class="space-y-2 text-xs">
             
+            {{-- #BACKEND Opsi 1: Google Wallet
+                 id: saveGoogleWallet() memicu integrasi Google Wallet API. Di backend: buat JWT class & object penerbangan lalu redirect ke URL Google Pay save.
+                 en: saveGoogleWallet() triggers Google Wallet API integration. In backend: generate JWT flight class & object then redirect to Google Pay save URL. --}}
             <!-- OPTION 1: Google Wallet (For Android Users) -->
             <button @click="saveGoogleWallet(); showWalletModal = false" 
                     class="w-full text-left p-3 rounded-lg border border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50 transition flex items-center justify-between group cursor-pointer">
@@ -51,6 +61,9 @@
                 <i class="fa-solid fa-chevron-right text-emerald-600 text-xs"></i>
             </button>
 
+            {{-- #BACKEND Opsi 2: Apple Wallet
+                 id: downloadPkpass() mengunduh file .pkpass. Di backend: generate pass.json yang di-sign dengan Apple Developer Certificate via PassKit.
+                 en: downloadPkpass() downloads .pkpass file. In backend: generate signed pass.json using Apple Developer Certificate via PassKit. --}}
             <!-- OPTION 2: Apple Wallet (For iPhone / iOS Users) -->
             <button @click="downloadPkpass(); showWalletModal = false" 
                     class="w-full text-left p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center justify-between group cursor-pointer">
@@ -70,6 +83,8 @@
                 <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
             </button>
 
+            {{-- id: Opsi 3: Simpan Gambar PNG / QR ke Galeri Foto HP
+                 en: Option 3: Save PNG / QR Image to Phone Photo Gallery --}}
             <!-- OPTION 3: Save as Image (PNG/QR) to Photo Gallery -->
             <button @click="downloadPassImage(); showWalletModal = false" 
                     class="w-full text-left p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition flex items-center justify-between group cursor-pointer">
@@ -90,6 +105,8 @@
 
         </div>
 
+        {{-- id: Footer modal tombol batal
+             en: Modal footer cancel button --}}
         <!-- Footer -->
         <div class="pt-1 flex justify-end">
             <button @click="showWalletModal = false" class="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer" x-text="lang === 'id' ? 'Batal' : 'Cancel'"></button>

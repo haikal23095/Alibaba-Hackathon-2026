@@ -86,6 +86,8 @@
 <body class="h-full font-sans antialiased text-[#1E293B] bg-[#F8FAFC] flex flex-col selection:bg-brand-500 selection:text-white"
       x-data="reboundApp()">
 
+    {{-- id: Navbar atas — berisi logo, navigasi utama, pemilih bahasa, notifikasi, profil user
+         en: Top navbar — contains logo, main navigation, language picker, notifications, user profile --}}
     <!-- Top App Bar Navigation -->
     @include('sections.navbar')
 
@@ -94,27 +96,41 @@
         @yield('content')
     </main>
 
+    {{-- id: Modal wajib input PNR pertama kali + scanner barcode tiket fisik. Lihat #BACKEND di file ini.
+         en: Mandatory first-time PNR input modal + physical ticket barcode scanner. See #BACKEND in file. --}}
     <!-- First-Time Access PNR Onboarding & Physical Ticket Scanner Modal -->
     @include('sections.pnr-onboarding-modal')
 
+    {{-- id: Modal daftar perjalanan — data perjalanan harus dari database bookings user
+         en: Trips list modal — trip data must come from user's bookings database --}}
     <!-- Modal My Trips -->
     @include('sections.my-trips-modal')
 
     <!-- Help & FAQ Guide Modal -->
     @include('sections.help-modal')
 
+    {{-- id: Modal QR code besar untuk di-scan di bandara — QR harus dari data booking real
+         en: Large QR code modal for airport scanning — QR must be from real booking data --}}
     <!-- Scannable Large QR Code Modal -->
     @include('sections.qr-modal')
 
+    {{-- id: Modal pilih wallet digital — integrasi Apple PassKit + Google Wallet API dari server
+         en: Digital wallet selector modal — Apple PassKit + Google Wallet API integration from server --}}
     <!-- Universal Mobile Wallet Selector Modal (Android Google Wallet + iOS Apple Wallet) -->
     @include('sections.wallet-modal')
 
+    {{-- id: Modal animasi proses rebooking multi-step — di produksi setiap step memanggil API backend
+         en: Multi-step rebooking process animation modal — in production each step calls backend API --}}
     <!-- Rebooking Process Animation Modal -->
     @include('sections.rebooking-modal')
 
+    {{-- id: Modal daftar penerbangan alternatif dari GDS Atlas — data harus dari GDS API real-time
+         en: GDS Atlas alternative flights list modal — data must come from real-time GDS API --}}
     <!-- Multi-Flight GDS Atlas Alternative Schedules Modal -->
     @include('sections.flight-options-modal')
 
+    {{-- id: Bottom navigation bar khusus mobile — UI-only, tidak ada data backend
+         en: Mobile-only bottom navigation bar — UI-only, no backend data needed --}}
     <!-- Smartphone Bottom Navigation Bar -->
     @include('sections.mobile-bottom-nav')
 
@@ -179,14 +195,33 @@
     </div>
 
     <!-- Alpine.js Main State Management -->
+    {{-- #BACKEND
+         id: Seluruh state management ini adalah fungsi utama aplikasi REBOUND. Setiap property dan function di bawah ini perlu disambungkan ke backend Laravel + database + API eksternal.
+         en: This entire state management is the core of REBOUND app. Every property and function below needs to be connected to Laravel backend + database + external APIs. --}}
     <script>
+        // id: reboundApp() — Fungsi utama Alpine.js yang mengelola seluruh state frontend. Backend harus menyediakan data awal via Blade props atau API endpoint.
+        // en: reboundApp() — Main Alpine.js function managing all frontend state. Backend must provide initial data via Blade props or API endpoints.
         function reboundApp() {
             return {
-                lang: localStorage.getItem('rebound_lang') || '{{ App::getLocale() }}' || 'en', // 'en' (primary) or 'id'
-                langOpen: false,
-                mobileTab: 'assistant', // 'assistant', 'details', 'tickets'
-                flightStatus: 'delayed', // 'on-time', 'delayed', 'rebooked'
-                activeSidebarTab: 'overview', // 'overview', 'policy', 'schedule', 'receipts'
+                // id: lang — Bahasa aktif user, disimpan di localStorage & disinkronkan ke session Laravel via /lang/{locale}
+                // en: lang — Active user language, saved in localStorage & synced to Laravel session via /lang/{locale}
+                lang: localStorage.getItem('rebound_lang') || '{{ App::getLocale() }}' || 'en',
+                langOpen: false, // id: toggle dropdown bahasa | en: language dropdown toggle
+
+                // id: mobileTab — Tab navigasi aktif di mobile (bawah layar)
+                // en: mobileTab — Active mobile navigation tab (bottom nav)
+                mobileTab: 'assistant',
+
+                // #BACKEND id: flightStatus — Status penerbangan saat ini, harus diambil dari GDS real-time API, bukan hardcode
+                // #BACKEND en: flightStatus — Current flight status, must be fetched from GDS real-time API, not hardcoded
+                flightStatus: 'delayed',
+
+                // id: activeSidebarTab — Tab aktif di sidebar kanan (overview/policy/schedule/receipts)
+                // en: activeSidebarTab — Active tab in right sidebar (overview/policy/schedule/receipts)
+                activeSidebarTab: 'overview',
+
+                // id: Visibility state untuk sidebar, modal, dan UI toggles
+                // en: Visibility state for sidebars, modals, and UI toggles
                 sidebarOpen: true,
                 leftSidebarOpen: true,
                 showMyTripsModal: false,
@@ -194,21 +229,46 @@
                 showQrModal: false,
                 showWalletModal: false,
                 showFlightOptionsModal: false,
+
+                // #BACKEND id: hasSetupPnr — Cek apakah user sudah pernah input PNR, saat ini pakai localStorage. Harus dicek dari database (users.has_setup_pnr)
+                // #BACKEND en: hasSetupPnr — Checks if user has ever input PNR, currently uses localStorage. Must check from database (users.has_setup_pnr)
                 hasSetupPnr: (localStorage.getItem('rebound_has_setup_pnr') === 'true' ? true : false),
+
+                // #BACKEND id: hasUnreadNotif — Notifikasi belum dibaca, harus dari database notifications table
+                // #BACKEND en: hasUnreadNotif — Unread notifications, must come from notifications database table
                 hasUnreadNotif: true,
+
+                // id: State untuk loading indicator download PDF & Wallet Pass
+                // en: Loading state for PDF & Wallet Pass download indicators
                 isDownloadingPdf: false,
                 isDownloadingPkpass: false,
+
+                // id: toast — Notifikasi toast global yang muncul di pojok kanan bawah
+                // en: toast — Global toast notification shown at bottom-right corner
                 toast: { visible: false, message: '' },
+
+                // id: State modal dan UI interaksi
+                // en: Modal and UI interaction states
                 showAddTicketModal: false,
                 showUserDropdown: false,
                 isRebookingProcess: false,
-                rebookStep: 1,
-                ticketSearch: '',
+                rebookStep: 1, // id: step animasi rebooking (1-4) | en: rebooking animation step (1-4)
+                ticketSearch: '', // id: filter pencarian tiket di sidebar kiri | en: ticket search filter in left sidebar
+
+                // #BACKEND id: selectedTicketId — ID tiket yang sedang dipilih, saat ini hardcode. Harus dari database bookings.id atau bookings.pnr
+                // #BACKEND en: selectedTicketId — Currently selected ticket ID, currently hardcoded. Must be from database bookings.id or bookings.pnr
                 selectedTicketId: 'GA826',
+
+                // id: chatInput — Teks input chat user yang sedang diketik
+                // en: chatInput — User's current chat input text being typed
                 chatInput: '',
+                // id: isTyping — Indikator bahwa AI sedang mengetik respons
+                // en: isTyping — Indicator that AI is currently typing a response
                 isTyping: false,
 
-                // Dynamic Context-Aware Prompt Suggestions (Siap integrasi API AI & GDS Atlas)
+                // #BACKEND Dynamic Context-Aware Prompt Suggestions
+                // id: Saran prompt ini masih statis — harus diambil dari API AI (Qwen/Atlas) berdasarkan konteks penerbangan real-time pengguna
+                // en: These prompt suggestions are static — must be fetched from AI API (Qwen/Atlas) based on user's real-time flight context
                 get dynamicSuggestions() {
                     if (this.selectedTicketId === 'GA826') {
                         if (this.flightStatus === 'rebooked') {
@@ -238,7 +298,9 @@
                     ];
                 },
 
-                // GDS Atlas Multi-Flight Inventory
+                // #BACKEND GDS Atlas Multi-Flight Inventory
+                // id: Daftar penerbangan alternatif ini statis — harus diambil dari GDS Atlas API atau Amadeus/Sabre berdasarkan rute & tanggal penerbangan yang terganggu
+                // en: This alternative flights list is static — must be fetched from GDS Atlas API or Amadeus/Sabre based on disrupted flight route & date
                 alternativeFlightsList: [
                     {
                         flightNumber: 'GA830',
@@ -314,33 +376,49 @@
                     }
                 ],
 
-                // Translation Catalogue from Symfony/Laravel Translation Service
+                // id: translations — Katalog terjemahan dari file lang/id/messages.php dan lang/en/messages.php Laravel
+                // en: translations — Translation catalogue from Laravel's lang/id/messages.php and lang/en/messages.php files
+                // #BACKEND id: Saat ini dari file statis. Nanti bisa dari database translations table untuk terjemahan dinamis
+                // #BACKEND en: Currently from static files. Can later come from database translations table for dynamic translations
                 translations: {
                     id: @json(trans('messages', [], 'id')),
                     en: @json(trans('messages', [], 'en'))
                 },
 
+                // id: t(key) — Helper function untuk mengambil terjemahan berdasarkan bahasa aktif. Jika key tidak ditemukan, return key itu sendiri.
+                // en: t(key) — Helper function to get translation based on active language. If key not found, returns the key itself.
                 t(key) {
                     return (this.translations[this.lang] && this.translations[this.lang][key]) || key;
                 },
 
+                // id: init() — Lifecycle hook Alpine.js, dipanggil saat komponen pertama kali dimuat. Render barcode awal dan watch perubahan state.
+                // en: init() — Alpine.js lifecycle hook, called when component first mounts. Renders initial barcode and watches state changes.
                 init() {
                     this.$nextTick(() => {
                         this.renderBarcode();
                     });
+                    // id: Watch perubahan state untuk re-render barcode otomatis
+                    // en: Watch state changes to auto re-render barcode
                     this.$watch('flightStatus', () => this.renderBarcode());
                     this.$watch('selectedTicketId', () => this.renderBarcode());
                     this.$watch('activeSidebarTab', () => this.renderBarcode());
                     this.$watch('currentUser', () => this.renderBarcode());
                 },
 
-                // Generate Real Mathematical Code128 Scannable Barcode via JsBarcode
+                // id: renderBarcode() — Generate barcode Code128 yang bisa di-scan menggunakan library JsBarcode. Data barcode diambil dari nama penumpang + nomor penerbangan.
+                // en: renderBarcode() — Generates scannable Code128 barcode using JsBarcode library. Barcode data is from passenger name + flight number.
+                // #BACKEND id: Data barcode (flightNo, paxName, seat) harus dari database bookings, bukan hardcode
+                // #BACKEND en: Barcode data (flightNo, paxName, seat) must come from bookings database, not hardcoded
                 renderBarcode() {
                     this.$nextTick(() => {
                         const barcodeEl = document.getElementById('live-boarding-barcode');
                         if (barcodeEl && typeof JsBarcode !== 'undefined') {
+                            // #BACKEND id: flightNo masih hardcode GA830/GA826, harus dari flight.original.flightNumber
+                            // #BACKEND en: flightNo is still hardcoded GA830/GA826, must be from flight.original.flightNumber
                             const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
                             const paxName = (this.currentUser && this.currentUser.name) ? this.currentUser.name.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase() : 'ZAKARIA';
+                            // id: Format barcode standar IATA BCBP (Bar Coded Boarding Pass)
+                            // en: Standard IATA BCBP (Bar Coded Boarding Pass) format
                             const codeVal = `M1${paxName}-${flightNo}-14A`;
                             try {
                                 JsBarcode(barcodeEl, codeVal, {
@@ -356,47 +434,51 @@
                     });
                 },
                 
-                // Authenticated Current User
+                // #BACKEND Authenticated Current User
+                // id: Data user sudah dari Auth — tapi 'role' & 'passenger' title masih statis, harus diambil dari tabel users/profiles di database
+                // en: User data is from Auth — but 'role' & 'passenger' title are still static, must be fetched from users/profiles table in database
                 currentUser: { 
                     id: {{ Auth::id() ?? 1 }}, 
                     name: @json(Auth::user()->name ?? 'Zakaria MP'), 
                     initials: @json(strtoupper(substr(Auth::user()->name ?? 'ZM', 0, 2))), 
                     email: @json(Auth::user()->email ?? 'zakariamp@rebound.ai'), 
-                    passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (MR)'),
-                    role: 'Frequent Flyer Platinum'
+                    passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (MR)'), // #BACKEND id: title MR/MRS harus dari DB | en: MR/MRS title from DB
+                    role: 'Frequent Flyer Platinum' // #BACKEND id: role/tier loyalty dari database | en: loyalty tier from database
                 },
 
-                // Flight Data State
+                // #BACKEND Flight Data State — SELURUH DATA STATIS
+                // id: Semua data penerbangan (nomor, maskapai, rute, waktu, status, delay) harus diambil dari database bookings/flights via PNR lookup + GDS real-time API
+                // en: All flight data (number, airline, route, times, status, delay) must be fetched from bookings/flights database via PNR lookup + GDS real-time API
                 flight: {
                     original: {
-                        flightNumber: 'GA826',
-                        airline: 'Garuda Indonesia',
-                        airlineCode: 'GA',
-                        fromCity: 'Jakarta',
-                        fromCode: 'CGK',
-                        toCity: 'Singapura',
+                        flightNumber: 'GA826', // #BACKEND dari DB: bookings.flight_number
+                        airline: 'Garuda Indonesia', // #BACKEND dari DB: airlines.name
+                        airlineCode: 'GA', // #BACKEND dari DB: airlines.iata_code
+                        fromCity: 'Jakarta', // #BACKEND dari DB: airports.city
+                        fromCode: 'CGK', // #BACKEND dari DB: airports.iata_code
+                        toCity: 'Singapura', // #BACKEND dari DB: airports.city (localized)
                         toCityEn: 'Singapore',
-                        toCode: 'SIN',
-                        date: '30 Nov',
-                        dateFullId: '30 November, 09.30',
+                        toCode: 'SIN', // #BACKEND dari DB: airports.iata_code
+                        date: '30 Nov', // #BACKEND dari DB: bookings.departure_date
+                        dateFullId: '30 November, 09.30', // #BACKEND format dari departure_date
                         dateFullEn: '30 Nov, 09:30 AM',
-                        depTime: '09:30',
-                        arrTime: '12:20',
-                        class: 'Economy (V)',
-                        statusId: 'Terlambat +4j 25m',
+                        depTime: '09:30', // #BACKEND dari DB: flights.scheduled_departure
+                        arrTime: '12:20', // #BACKEND dari DB: flights.scheduled_arrival
+                        class: 'Economy (V)', // #BACKEND dari DB: bookings.cabin_class + fare_basis
+                        statusId: 'Terlambat +4j 25m', // #BACKEND dari GDS real-time API: flight status
                         statusEn: 'Delayed +4h 25m',
-                        delayTime: '30 Nov, 09.30 PM',
-                        delayCauseId: 'Cuaca buruk',
+                        delayTime: '30 Nov, 09.30 PM', // #BACKEND dari GDS API: estimated_departure
+                        delayCauseId: 'Cuaca buruk', // #BACKEND dari GDS API: delay_reason
                         delayCauseEn: 'Bad weather',
-                        changeAllowedId: 'Ya',
+                        changeAllowedId: 'Ya', // #BACKEND dari DB: fare_rules.change_allowed
                         changeAllowedEn: 'Yes',
-                        feeAmountId: 'Rp750.000',
+                        feeAmountId: 'Rp750.000', // #BACKEND dari DB: fare_rules.change_fee
                         feeAmountEn: '$50',
-                        fareDiffId: 'Berlaku',
+                        fareDiffId: 'Berlaku', // #BACKEND dari DB: fare_rules.fare_diff_policy
                         fareDiffEn: 'Applies',
                     },
                     alternative: {
-                        flightNumber: 'GA830',
+                        flightNumber: 'GA830', // #BACKEND dari GDS Atlas API: recommended alternative
                         airline: 'Garuda Indonesia',
                         airlineCode: 'GA',
                         fromCity: 'Jakarta',
@@ -408,12 +490,14 @@
                         arrTime: '15:25',
                         duration: '2j 45m',
                         durationEn: '2h 45m',
-                        departureCountdownId: 'Berangkat 45 menit lagi',
+                        departureCountdownId: 'Berangkat 45 menit lagi', // #BACKEND hitung real-time dari server time
                         departureCountdownEn: 'Departs in 45 min',
                     }
                 },
 
-                // Chat Messages History
+                // #BACKEND Chat Messages History
+                // id: Pesan awal & riwayat chat harus diambil dari database messages + di-generate oleh AI API (Qwen) berdasarkan data penerbangan real-time
+                // en: Initial message & chat history must be fetched from messages database + generated by AI API (Qwen) based on real-time flight data
                 messages: [
                     {
                         sender: 'ai',
@@ -425,9 +509,13 @@
                     }
                 ],
 
-                // Select Ticket from Left Sidebar
+                // #BACKEND Select Ticket from Left Sidebar
+                // id: Fungsi selectTicket() masih hardcode data per tiket — harus fetch dari API /api/bookings/{pnr} untuk mendapatkan data real-time
+                // en: selectTicket() still hardcodes data per ticket — must fetch from API /api/bookings/{pnr} to get real-time data
                 selectTicket(id) {
                     this.selectedTicketId = id;
+                    // id: Case GA826 — Data penerbangan Garuda Indonesia yang terganggu (delayed). Semua data hardcode di bawah ini harus diambil dari API /api/bookings/GA826
+                    // en: Case GA826 — Disrupted Garuda Indonesia flight data (delayed). All hardcoded data below must be fetched from API /api/bookings/GA826
                     if (id === 'GA826') {
                         this.flightStatus = 'delayed';
                         this.flight.original.flightNumber = 'GA826';
@@ -444,6 +532,8 @@
                                 showRecommendation: true,
                             }
                         ];
+                    // id: Case SQ951 — Tiket Singapore Airlines Business Class (on-time). Data hardcode harus dari API /api/bookings/SQ951
+                    // en: Case SQ951 — Singapore Airlines Business Class ticket (on-time). Hardcoded data must be from API /api/bookings/SQ951
                     } else if (id === 'SQ951') {
                         this.flightStatus = 'on-time';
                         this.flight.original = {
@@ -488,6 +578,8 @@
                                 showRecommendation: false,
                             }
                         ];
+                    // id: Case SQ638 — Tiket Singapore Airlines ke Tokyo Haneda (on-time). Data hardcode harus dari API /api/bookings/SQ638
+                    // en: Case SQ638 — Singapore Airlines ticket to Tokyo Haneda (on-time). Hardcoded data must be from API /api/bookings/SQ638
                     } else if (id === 'SQ638') {
                         this.flightStatus = 'on-time';
                         this.flight.original = {
@@ -532,6 +624,8 @@
                                 showRecommendation: false,
                             }
                         ];
+                    // id: Case default — Trip yang sudah selesai. Tampilkan pesan bahwa perjalanan telah selesai.
+                    // en: Case default — Completed trips. Show message that the trip has been completed.
                     } else {
                         this.flightStatus = 'on-time';
                         this.messages = [
@@ -547,7 +641,10 @@
                     }
                 },
 
-                // Switch status helpers
+                // id: setStatus(status) — Mengubah status penerbangan secara manual (untuk demo). Jika status 'rebooked', otomatis pindah ke tab jadwal.
+                // en: setStatus(status) — Manually changes flight status (for demo). If status is 'rebooked', automatically switches to schedule tab.
+                // #BACKEND id: Tidak perlu di produksi — status penerbangan akan otomatis diupdate dari GDS real-time polling/webhook
+                // #BACKEND en: Not needed in production — flight status will be auto-updated from GDS real-time polling/webhook
                 setStatus(status) {
                     this.flightStatus = status;
                     if (status === 'rebooked') {
@@ -555,7 +652,10 @@
                     }
                 },
 
-                // Set language (Sync with Laravel / Symfony Translator backend)
+                // id: setLanguage(l) — Mengubah bahasa aplikasi (id/en). Simpan ke localStorage dan kirim request ke backend Laravel untuk set session locale.
+                // en: setLanguage(l) — Changes app language (id/en). Saves to localStorage and sends request to Laravel backend to set session locale.
+                // #BACKEND id: Endpoint /lang/{locale} harus ada di routes/web.php untuk set App::setLocale()
+                // #BACKEND en: Endpoint /lang/{locale} must exist in routes/web.php to set App::setLocale()
                 async setLanguage(l) {
                     this.lang = l;
                     try {
@@ -565,7 +665,10 @@
                     this.langOpen = false;
                 },
 
-                // Select Custom Alternative Flight from GDS Atlas Modal
+                // id: selectCustomAlternative(altFlight) — Dipanggil saat user memilih penerbangan alternatif dari modal GDS Atlas. Set data penerbangan alternatif baru lalu jalankan proses rebooking.
+                // en: selectCustomAlternative(altFlight) — Called when user selects an alternative flight from GDS Atlas modal. Sets new alternative flight data then runs rebooking process.
+                // #BACKEND id: Data altFlight harus dari GDS Atlas API response, bukan dari array statis alternativeFlightsList
+                // #BACKEND en: altFlight data must come from GDS Atlas API response, not from static alternativeFlightsList array
                 selectCustomAlternative(altFlight) {
                     this.flight.alternative = {
                         flightNumber: altFlight.flightNumber,
@@ -586,30 +689,39 @@
                     this.rebookFlight(altFlight);
                 },
 
-                // Rebook action with multi-step telemetry dispatch animation
+                // #BACKEND Rebook action with multi-step telemetry dispatch animation
+                // id: Proses rebooking masih simulasi timeout — harus memanggil API backend /api/rebook untuk proses rebooking nyata di GDS
+                // en: Rebooking process is still simulated timeout — must call backend API /api/rebook for real GDS rebooking process
                 rebookFlight(targetFlight = null) {
                     const target = targetFlight || this.flight.alternative;
                     this.isRebookingProcess = true;
                     this.rebookStep = 1;
 
-                    // Step 1: Disruption Tariff Waiver Check
+                    // id: Step 1 (700ms): Cek waiver tarif gangguan — di produksi: panggil API /api/rebook/check-waiver
+                    // en: Step 1 (700ms): Disruption tariff waiver check — in production: call API /api/rebook/check-waiver
                     setTimeout(() => {
                         this.rebookStep = 2;
                     }, 700);
 
-                    // Step 2: Baggage Auto-Transfer
+                    // id: Step 2 (1400ms): Transfer bagasi otomatis — di produksi: panggil API /api/rebook/transfer-baggage
+                    // en: Step 2 (1400ms): Auto baggage transfer — in production: call API /api/rebook/transfer-baggage
                     setTimeout(() => {
                         this.rebookStep = 3;
                     }, 1400);
 
-                    // Step 3: Boarding Pass & Seat Assignment Completed
+                    // id: Step 3 (2100ms): Boarding pass & seat assignment selesai — di produksi: panggil API /api/rebook/confirm
+                    // en: Step 3 (2100ms): Boarding pass & seat assignment complete — in production: call API /api/rebook/confirm
                     setTimeout(() => {
                         this.rebookStep = 4;
                         setTimeout(() => {
                             this.isRebookingProcess = false;
                             this.flightStatus = 'rebooked';
-                            this.activeSidebarTab = 'receipts'; // Automatically display the new Boarding Pass in sidebar!
+                            // id: Otomatis pindah ke tab receipts untuk tampilkan boarding pass baru
+                            // en: Automatically switch to receipts tab to show new boarding pass
+                            this.activeSidebarTab = 'receipts';
 
+                            // id: Push pesan user ke chat bahwa rebooking telah diminta
+                            // en: Push user message to chat that rebooking was requested
                             this.messages.push({
                                 sender: 'user',
                                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -622,6 +734,8 @@
                             this.isTyping = true;
                             setTimeout(() => {
                                 this.isTyping = false;
+                                // id: Push konfirmasi rebooking sukses dari AI ke chat
+                                // en: Push rebooking success confirmation from AI to chat
                                 this.messages.push({
                                     sender: 'ai',
                                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -637,7 +751,10 @@
                     }, 2100);
                 },
 
-                // Send User Message
+                // id: sendMessage(customText) — Mengirim pesan chat dari user. customText digunakan untuk saran prompt yang diklik, atau ambil dari chatInput.
+                // en: sendMessage(customText) — Sends a user chat message. customText is used for clicked prompt suggestions, or takes from chatInput.
+                // #BACKEND id: Pesan user harus dikirim ke API backend POST /api/chat/send, disimpan ke database messages, lalu respons AI dari Qwen API
+                // #BACKEND en: User message must be sent to backend API POST /api/chat/send, saved to messages database, then AI response from Qwen API
                 sendMessage(customText = null) {
                     const text = customText || this.chatInput;
                     if (!text || text.trim() === '') return;
@@ -654,13 +771,16 @@
                     this.isTyping = true;
                     this.scrollToBottom();
 
-                    // AI Simulated Response
+                    // #BACKEND AI Simulated Response
+                    // id: Respons AI ini masih simulasi/statis — harus diganti dengan panggilan ke AI API (Qwen/Atlas) untuk respons cerdas real-time
+                    // en: This AI response is still simulated/static — must be replaced with AI API call (Qwen/Atlas) for real-time intelligent responses
                     setTimeout(() => {
                         this.isTyping = false;
                         const lower = text.toLowerCase();
 
-                        if (lower.includes('besok pagi') || lower.includes('cek tiket') || lower.includes('aturan') || lower.includes('policy') || lower.includes('biaya')) {
-                            // Figma Node 22:1109 - In-Chat Verified Ticket Policy Card
+                         if (lower.includes('besok pagi') || lower.includes('cek tiket') || lower.includes('aturan') || lower.includes('policy') || lower.includes('biaya')) {
+                            // id: Respons tipe policy_card — tampilkan kartu kebijakan tiket di chat. Di produksi: query fare_rules dari DB
+                            // en: policy_card response type — shows ticket policy card in chat. In production: query fare_rules from DB
                             this.messages.push({
                                 sender: 'ai',
                                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -670,7 +790,8 @@
                                 showTicketPolicy: true
                             });
                         } else if (lower.includes('cuaca') || lower.includes('weather') || lower.includes('kondisi')) {
-                            // Figma Node 15:777 & 21:894 - Disruption Progress & Recommendation
+                            // id: Respons tipe disruption_alert — tampilkan kartu gangguan + rekomendasi. Di produksi: data dari weather API + GDS status
+                            // en: disruption_alert response type — shows disruption card + recommendation. In production: data from weather API + GDS status
                             this.messages.push({
                                 sender: 'ai',
                                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -702,7 +823,9 @@
                     }, 500);
                 },
 
-                // Download Official PDF Boarding Pass / Trigger Print to PDF
+                // #BACKEND Download Official PDF Boarding Pass
+                // id: PDF boarding pass masih di-generate client-side — harus di-generate dari server (Laravel PDF) dengan data booking dari database
+                // en: PDF boarding pass is still generated client-side — must be server-generated (Laravel PDF) with booking data from database
                 downloadPdf() {
                     this.isDownloadingPdf = true;
                     setTimeout(() => {
@@ -712,7 +835,8 @@
                         const gate = this.flightStatus === 'rebooked' ? '4A' : '3B';
                         const boarding = this.flightStatus === 'rebooked' ? '12:00 WIB' : '08:50 WIB';
 
-                        // Generate printable official E-Boarding Pass HTML Document
+                        // id: Buka jendela baru untuk cetak boarding pass HTML. Di produksi: redirect ke GET /api/boarding-pass/{pnr}/pdf
+                        // en: Open new window to print boarding pass HTML. In production: redirect to GET /api/boarding-pass/{pnr}/pdf
                         const printWindow = window.open('', '_blank');
                         if (printWindow) {
                             printWindow.document.write(`
@@ -808,7 +932,9 @@
                     }, 500);
                 },
 
-                // Download Digital Apple Wallet Pass (.pkpass)
+                // #BACKEND Download Digital Apple Wallet Pass (.pkpass)
+                // id: File .pkpass masih dummy blob — harus di-generate dari server menggunakan Apple PassKit dengan sertifikat & data booking dari DB
+                // en: .pkpass file is still a dummy blob — must be server-generated using Apple PassKit with certificate & booking data from DB
                 downloadPkpass() {
                     this.isDownloadingPkpass = true;
                     setTimeout(() => {
@@ -833,7 +959,9 @@
                     }, 500);
                 },
 
-                // Save to Google Wallet (Android Support)
+                // #BACKEND Save to Google Wallet (Android Support)
+                // id: Google Wallet masih toast saja — harus integrasi Google Wallet API dengan JWT pass dari server
+                // en: Google Wallet is toast-only — must integrate Google Wallet API with JWT pass from server
                 saveGoogleWallet() {
                     const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
                     this.showToast(
@@ -843,7 +971,10 @@
                     );
                 },
 
-                // Save High-Resolution Boarding Pass Image to Photo Gallery (Universal)
+                // id: downloadPassImage() — Download gambar QR code boarding pass resolusi tinggi ke galeri foto HP.
+                // en: downloadPassImage() — Downloads high-resolution boarding pass QR code image to phone photo gallery.
+                // #BACKEND id: QR code harus di-generate dari server dengan data booking dari database, bukan dari API pihak ketiga
+                // #BACKEND en: QR code must be server-generated with booking data from database, not from third-party API
                 downloadPassImage() {
                     const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
                     const link = document.createElement('a');
@@ -860,7 +991,8 @@
                     );
                 },
 
-                // Show Global Toast Notification
+                // id: showToast(msg) — Menampilkan notifikasi toast di pojok kanan bawah selama 4 detik.
+                // en: showToast(msg) — Shows a toast notification at bottom-right corner for 4 seconds.
                 showToast(msg) {
                     this.toast.message = msg;
                     this.toast.visible = true;
@@ -869,7 +1001,8 @@
                     }, 4000);
                 },
 
-                // Smooth Scroll to bottom
+                // id: scrollToBottom() — Scroll otomatis ke bawah container chat agar pesan terbaru terlihat.
+                // en: scrollToBottom() — Auto-scrolls to bottom of chat container so latest message is visible.
                 scrollToBottom() {
                     this.$nextTick(() => {
                         const container = document.getElementById('chat-messages-container');
