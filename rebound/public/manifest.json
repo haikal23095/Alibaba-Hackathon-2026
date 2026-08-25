@@ -1,0 +1,18 @@
+{
+  "name": "REBOUND - AI Flight Assistant & Smart Rebooking",
+  "short_name": "REBOUND",
+  "description": "Enterprise AI Passenger Assistant for Instant Flight Disruption Monitoring, Ticket Policy Waiver Verification & One-Click GDS Rebooking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64 128x128 256x256 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

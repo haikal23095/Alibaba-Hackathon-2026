@@ -10,66 +10,74 @@
      x-transition:leave-end="opacity-0">
     
     <div @click.away="showMyTripsModal = false"
-         class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-floating border border-slate-100 space-y-5"
-         x-transition:enter="transition ease-out duration-200"
+         class="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 space-y-4"
+         x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100"
-         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave="transition ease-in duration-100"
          x-transition:leave-start="opacity-100 scale-100"
          x-transition:leave-end="opacity-0 scale-95">
         
         <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-sm">
                     <i class="fa-solid fa-plane-departure"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-slate-900"
+                    <h3 class="text-sm font-bold text-slate-900"
                         x-text="lang === 'id' ? 'Perjalanan Saya' : 'My Trips'"></h3>
-                    <p class="text-xs text-slate-500"
-                       x-text="lang === 'id' ? 'Kelola dan pantau seluruh penerbangan aktif Anda' : 'Manage and monitor all your active bookings'"></p>
+                    <p class="text-[11px] text-slate-500"
+                       x-text="lang === 'id' ? 'Daftar tiket penerbangan aktif' : 'Active flight tickets'"></p>
                 </div>
             </div>
 
             <button @click="showMyTripsModal = false"
-                    class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark text-sm"></i>
+                    class="w-7 h-7 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-xs"></i>
             </button>
         </div>
 
         <!-- Trip Cards List -->
-        <div class="space-y-3">
+        <div class="space-y-2">
             <!-- Active Trip Item -->
-            <div @click="showMyTripsModal = false; setStatus('delayed');"
-                 class="p-4 rounded-2xl border-2 border-brand-500 bg-blue-50/30 hover:bg-blue-50/60 cursor-pointer transition flex items-center justify-between">
-                <div class="space-y-1">
+            <div @click="showMyTripsModal = false; selectTicket('GA826')"
+                 class="p-3 rounded-lg border-2 border-brand-500 bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer transition flex items-center justify-between shadow-2xs">
+                <div class="space-y-0.5">
                     <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-slate-900">CGK → SIN</span>
-                        <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">Terlambat +4j</span>
+                        <span class="text-xs font-bold text-slate-900">CGK → SIN</span>
+                        <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9.5px] font-bold"
+                              x-text="lang === 'id' ? 'Terlambat +4j' : 'Delayed +4h'"></span>
                     </div>
-                    <p class="text-xs text-slate-500">Garuda Indonesia (GA826) • 30 Nov 2026</p>
+                    <p class="text-[11px] text-slate-500">Garuda Indonesia (GA826) • 30 Nov 2026</p>
                 </div>
                 <i class="fa-solid fa-chevron-right text-xs text-brand-600"></i>
             </div>
 
             <!-- Future Trip Item -->
-            <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition flex items-center justify-between opacity-80">
-                <div class="space-y-1">
+            <div @click="showMyTripsModal = false; selectTicket('SQ638')"
+                 class="p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition flex items-center justify-between shadow-2xs">
+                <div class="space-y-0.5">
                     <div class="flex items-center gap-2">
-                        <span class="text-sm font-bold text-slate-900">SIN → HND</span>
-                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">Tepat Waktu</span>
+                        <span class="text-xs font-bold text-slate-900">SIN → HND</span>
+                        <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9.5px] font-bold"
+                              x-text="lang === 'id' ? 'Tepat Waktu' : 'On Time'"></span>
                     </div>
-                    <p class="text-xs text-slate-500">Singapore Airlines (SQ638) • 05 Des 2026</p>
+                    <p class="text-[11px] text-slate-500">Singapore Airlines (SQ638) • 05 Des 2026</p>
                 </div>
                 <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
             </div>
         </div>
 
-        <!-- Close button -->
-        <div class="pt-2">
+        <!-- Action buttons -->
+        <div class="pt-2 space-y-1.5">
+            <button @click="showMyTripsModal = false; hasSetupPnr = false"
+                    class="w-full py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span x-text="lang === 'id' ? 'Tambah Tiket Baru' : 'Add New Ticket'"></span>
+            </button>
             <button @click="showMyTripsModal = false"
-                    class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition">
+                    class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition cursor-pointer">
                 <span x-text="lang === 'id' ? 'Tutup' : 'Close'"></span>
             </button>
         </div>

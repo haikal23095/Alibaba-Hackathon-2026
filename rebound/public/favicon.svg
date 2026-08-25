@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <!-- Blue gradient squircle background -->
+    <defs>
+        <linearGradient id="favGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#2563EB"/>
+            <stop offset="1" stop-color="#1D4ED8"/>
+        </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="14" fill="url(#favGrad)"/>
+    
+    <!-- Smooth Circular Rebound Orbit / Turnaround Loop -->
+    <path d="M32 9C19.2975 9 9 19.2975 9 32C9 44.7025 19.2975 55 32 55C43.6811 55 53.3039 46.3687 54.8569 35" 
+          stroke="white" 
+          stroke-width="5" 
+          stroke-linecap="round" 
+          stroke-dasharray="76 8"/>
+    
+    <!-- Arrow Head on the Rebound Loop Arc -->
+    <path d="M38 4L32 10L38 16" 
+          stroke="white" 
+          stroke-width="5" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+    
+    <!-- Centered Passenger Jet Plane -->
+    <g transform="translate(32, 32) rotate(-15) translate(-32, -32)">
+        <path d="M32 14C30.8 14 30 15.2 30 16.8V28L16 36V40.4L30 35.6V46.4L25 50V53L32 51L39 53V50L34 46.4V35.6L48 40.4V36L34 28V16.8C34 15.2 33.2 14 32 14Z" 
+              fill="white"/>
+    </g>
+</svg>

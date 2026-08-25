@@ -29,9 +29,61 @@
             </div>
         </div>
 
-        <button class="w-6 h-6 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
-            <i class="fa-solid fa-ellipsis text-xs"></i>
-        </button>
+        <!-- Flight Actions Context Menu Dropdown (Interactive) -->
+        <div class="relative" x-data="{ flightMenuOpen: false }">
+            <button @click="flightMenuOpen = !flightMenuOpen"
+                    class="w-7 h-7 rounded-lg border border-slate-200/80 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer shadow-2xs"
+                    :title="lang === 'id' ? 'Opsi Penerbangan' : 'Flight Options'">
+                <i class="fa-solid fa-ellipsis text-xs"></i>
+            </button>
+
+            <!-- Context Dropdown Menu -->
+            <div x-show="flightMenuOpen" 
+                 @click.away="flightMenuOpen = false" 
+                 x-cloak
+                 class="absolute right-0 mt-1.5 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-1.5 z-50 text-xs text-left">
+                
+                <div class="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                     x-text="lang === 'id' ? 'Tindakan Penerbangan' : 'Flight Actions'"></div>
+
+                <!-- 1. Refresh Radar Status -->
+                <button @click="flightMenuOpen = false; showToast(lang === 'id' ? 'Status radar telemetri penerbangan berhasil diperbarui live!' : 'Live radar flight telemetry refreshed!')"
+                        class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition cursor-pointer text-xs">
+                    <i class="fa-solid fa-arrows-rotate text-brand-600 text-xs w-4 text-center"></i>
+                    <span x-text="lang === 'id' ? 'Perbarui Data Radar Live' : 'Refresh Live Radar Data'"></span>
+                </button>
+
+                <!-- 2. Copy PNR Code -->
+                <button @click="navigator.clipboard.writeText('GA-9821A'); flightMenuOpen = false; showToast(lang === 'id' ? 'Kode PNR GA-9821A disalin ke clipboard!' : 'PNR Code GA-9821A copied to clipboard!')"
+                        class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition cursor-pointer text-xs">
+                    <i class="fa-regular fa-copy text-slate-500 text-xs w-4 text-center"></i>
+                    <span x-text="lang === 'id' ? 'Salin Kode PNR (GA-9821A)' : 'Copy PNR Code (GA-9821A)'"></span>
+                </button>
+
+                <!-- 3. Switch / Manage Ticket in My Trips -->
+                <button @click="showMyTripsModal = true; flightMenuOpen = false"
+                        class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition cursor-pointer text-xs">
+                    <i class="fa-solid fa-plane-up text-sky-600 text-xs w-4 text-center"></i>
+                    <span x-text="lang === 'id' ? 'Kelola di Perjalanan Saya' : 'Manage in My Trips'"></span>
+                </button>
+
+                <!-- 4. Download / Print PDF -->
+                <button @click="downloadPdf(); flightMenuOpen = false"
+                        class="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition cursor-pointer text-xs">
+                    <i class="fa-solid fa-file-pdf text-red-500 text-xs w-4 text-center"></i>
+                    <span x-text="lang === 'id' ? 'Cetak / Unduh PDF Tiket' : 'Print / Download Ticket PDF'"></span>
+                </button>
+
+                <div class="my-1 border-t border-slate-100"></div>
+
+                <!-- 5. Toggle Alert Notifications -->
+                <button @click="flightMenuOpen = false; showToast(lang === 'id' ? 'Pengingat SMS & Notifikasi Gate aktif!' : 'SMS Alert & Gate Reminders activated!')"
+                        class="w-full text-left px-3.5 py-2 hover:bg-amber-50 text-amber-900 flex items-center gap-2.5 transition cursor-pointer text-xs font-medium">
+                    <i class="fa-solid fa-bell text-amber-500 text-xs w-4 text-center"></i>
+                    <span x-text="lang === 'id' ? 'Aktifkan Pengingat Gate SMS' : 'Enable SMS Gate Alerts'"></span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Navigation Tabs (Compact) -->
@@ -72,7 +124,7 @@
     </div>
 
     <!-- Tab Content (Compact Zoom-out padding) -->
-    <div class="p-3.5 space-y-3.5 flex-1">
+    <div class="p-2.5 space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">
         
         <!-- ================= TAB 1: OVERVIEW / RINGKASAN ================= -->
         <div x-show="activeSidebarTab === 'overview'" class="space-y-3">
@@ -98,19 +150,18 @@
                     <!-- Origin Departure -->
                     <div class="relative">
                         <div class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-400 ring-2 ring-white"></div>
-                        <div class="font-bold text-slate-900 text-xs">CGK Jakarta</div>
+                        <div class="font-bold text-slate-900 text-xs" x-text="flight.original.fromCode + ' ' + flight.original.fromCity"></div>
                         <div class="text-[11px] text-slate-500 font-medium"
-                             x-text="lang === 'id' ? '30 November, 09.30' : '30 Nov, 09:30 AM'"></div>
+                             x-text="flight.original.date + ', ' + flight.original.depTime"></div>
                     </div>
 
                     <!-- Destination Arrival -->
                     <div class="relative">
                         <div class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-900 ring-2 ring-white"></div>
-                        <div class="font-bold text-slate-900 text-xs">
-                            <span x-text="lang === 'id' ? 'SIN Singapura' : 'SIN Singapore'"></span>
-                        </div>
+                        <div class="font-bold text-slate-900 text-xs"
+                             x-text="flight.original.toCode + ' ' + (lang === 'id' ? flight.original.toCity : (flight.original.toCityEn || flight.original.toCity))"></div>
                         <div class="text-[11px] text-slate-500 font-medium"
-                             x-text="lang === 'id' ? '30 November, 12.20' : '30 Nov, 12:20 PM'"></div>
+                             x-text="flight.original.date + ', ' + flight.original.arrTime"></div>
                     </div>
                 </div>
             </div>
@@ -186,18 +237,18 @@
                 <div class="p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 text-[11px]">
                     <div class="flex items-center justify-between font-bold text-slate-900 mb-0.5">
                         <span>GA826 • 09:30</span>
-                        <span class="text-amber-700 font-semibold">Delayed +4j 25m</span>
+                        <span class="text-amber-700 font-semibold" x-text="lang === 'id' ? 'Terlambat +4j 25m' : 'Delayed +4h 25m'"></span>
                     </div>
-                    <p class="text-slate-500 text-[10px]">Gate 3B • Terminal 3 CGK</p>
+                    <p class="text-slate-500 text-[10px]" x-text="lang === 'id' ? 'Gate 3B • Terminal 3 CGK' : 'Gate 3B • Terminal 3 CGK'"></p>
                 </div>
 
                 <!-- Flight 2 (GA830) -->
                 <div class="p-2.5 rounded-lg border border-brand-200 bg-blue-50/60 text-[11px]">
                     <div class="flex items-center justify-between font-bold text-slate-900 mb-0.5">
                         <span>GA830 • 12:40</span>
-                        <span class="text-brand-700 font-semibold">On Time (Direct)</span>
+                        <span class="text-brand-700 font-semibold" x-text="lang === 'id' ? 'Tepat Waktu (Langsung)' : 'On Time (Direct)'"></span>
                     </div>
-                    <p class="text-slate-500 text-[10px]">Gate 4A • Terminal 3 CGK • Boarding in 45m</p>
+                    <p class="text-slate-500 text-[10px]" x-text="lang === 'id' ? 'Gate 4A • Terminal 3 CGK • Boarding dalam 45m' : 'Gate 4A • Terminal 3 CGK • Boarding in 45m'"></p>
                 </div>
             </div>
         </div>
@@ -205,26 +256,10 @@
         <!-- ================= TAB 4: RECEIPTS / RESI ================= -->
         <div x-show="activeSidebarTab === 'receipts'" class="space-y-3">
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-                 x-text="lang === 'id' ? 'BUKTI TRANSAKSI & E-TIKET' : 'BOOKING RECEIPT & E-TICKET'"></div>
+                 x-text="lang === 'id' ? 'E-BOARDING PASS & BUKTI RESMI' : 'E-BOARDING PASS & TICKET'"></div>
 
-            <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-2 text-[11px]">
-                <div class="flex justify-between py-0.5 border-b border-slate-100">
-                    <span class="text-slate-500">Booking Reference</span>
-                    <span class="font-mono font-bold text-slate-900">RB-829140</span>
-                </div>
-                <div class="flex justify-between py-0.5 border-b border-slate-100">
-                    <span class="text-slate-500">Passenger Name</span>
-                    <span class="font-semibold text-slate-900" x-text="currentUser.passenger"></span>
-                </div>
-                <div class="flex justify-between py-0.5 border-b border-slate-100">
-                    <span class="text-slate-500">Rebooking Penalty</span>
-                    <span class="font-bold text-emerald-600">Rp 0 (Waived)</span>
-                </div>
-                <div class="flex justify-between py-0.5">
-                    <span class="text-slate-500">Status</span>
-                    <span class="px-1.5 py-0.2 bg-emerald-50 text-emerald-700 font-semibold rounded text-[10px]">Confirmed</span>
-                </div>
-            </div>
+            <!-- Authentic Aviation Boarding Pass with Perforated Tear Line & Barcode -->
+            @include('sections.boarding-pass')
         </div>
 
     </div>

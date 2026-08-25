@@ -1,0 +1,116 @@
+<?php
+
+return [
+    'app_name' => 'REBOUND',
+    'tagline' => 'AI Flight Assistant & Smart Rebooking',
+    'assistant' => 'Assistant',
+    'my_trips' => 'My Trips',
+    'ticket_history' => 'PNR Ticket History',
+    'monitoring_active_trip' => 'Monitoring 1 active trip',
+    'language' => 'Language',
+    'language_id' => 'Bahasa Indonesia (ID)',
+    'language_en' => 'English (EN)',
+    'notifications' => 'Notifications',
+    'help_faq' => 'Help & FAQ',
+    
+    // Left Sidebar
+    'monitor_new_ticket' => 'Monitor New Ticket',
+    'search_pnr_placeholder' => 'Search PNR / Route / Airline...',
+    'active_monitoring' => 'Active Monitoring',
+    'this_month' => 'This Month',
+    'previous_trips' => 'Previous Trips',
+    'trip_completed' => 'Completed',
+    'active_account' => 'Active Account',
+    'logout' => 'Log Out',
+    
+    // Status
+    'status_on_time' => 'On Time',
+    'status_delayed' => 'Delayed (+4h 25m)',
+    'status_rebooked' => 'Rebooked (GA830)',
+    'cause_bad_weather' => 'Bad weather at CGK Airport',
+    
+    // Tabs
+    'tab_overview' => 'Overview',
+    'tab_policy' => 'Policy',
+    'tab_schedule' => 'Schedule',
+    'tab_receipts' => 'Receipts',
+    
+    // Trip details
+    'trip_details' => 'TRIP DETAILS',
+    'departure' => 'Departure',
+    'arrival' => 'Arrival',
+    'direct_flight' => 'Direct flight',
+    'duration' => 'Duration',
+    'flight_class' => 'Cabin Class',
+    
+    // Alternative Search
+    'alternative_search' => 'Alternative Search',
+    'original_flight' => 'Original Flight',
+    'flight_cancelled_delayed' => 'Cancelled / Delayed',
+    'route' => 'Route',
+    'date' => 'Date',
+    'today' => 'Today',
+    
+    // Verified Policy
+    'verified_policy' => 'VERIFIED POLICY',
+    'disruption_waiver_desc' => 'Free change fees due to airline GA826 operational disruption. Fare difference waived.',
+    
+    // Ticket Policy Table
+    'verified_ticket_rules' => 'Verified Ticket Rules',
+    'reschedule_allowed' => 'Reschedule',
+    'reschedule_yes' => 'Yes (Free of Charge)',
+    'change_fee' => 'Change fee',
+    'fee_waived' => '$0 (Disruption Waiver)',
+    'fare_diff' => 'Fare difference',
+    'fare_diff_waived' => 'Waived',
+    'disruption_change' => 'Disruption rebooking',
+    'meets_requirements' => 'Eligible',
+    'economy_rule_summary' => 'Your Economy ticket allows free flight rescheduling due to the disruption exceeding 4 hours.',
+    'view_policy_details' => 'View policy details',
+    
+    // Schedule & Live Status
+    'today_flights' => 'Today\'s Flights',
+    'flight_comparison' => 'Schedule Comparison',
+    'gate_info' => 'Gate 4A • Terminal 3 CGK • Boarding in 45m',
+    
+    // Receipts
+    'booking_receipt_title' => 'BOOKING RECEIPT & E-TICKET',
+    'booking_reference' => 'Booking Reference (PNR)',
+    'passenger_name' => 'Passenger Name',
+    'rebooking_penalty' => 'Rebooking Penalty',
+    'status_confirmed' => 'Confirmed',
+    
+    // Recommendation Card
+    'eligible_reschedule_notice' => 'Your ticket is eligible for rescheduling due to flight disruption.',
+    'covered_by_airline' => 'Covered by airline',
+    'no_additional_fee' => 'No additional fee',
+    'transfer_to_flight' => 'Transfer to GA830',
+    'view_other_options' => 'View other options',
+    'recommended' => 'RECOMMENDED',
+    
+    // Chat & Suggestions
+    'suggestion_weather' => 'Ask about weather conditions affecting your flight..',
+    'suggestion_reschedule' => 'Ask about flight status or rescheduling options...',
+    'chat_input_placeholder' => 'Ask something about your trip...',
+    
+    // Modals
+    'modal_add_ticket_title' => 'Monitor New Flight Ticket',
+    'pnr_input_label' => 'Booking Reference / PNR',
+    'pnr_input_placeholder' => 'Example: GA-9821A',
+    'passenger_input_label' => 'Passenger Name',
+    'btn_cancel' => 'Cancel',
+    'btn_start_monitor' => 'Start Monitoring',
+    
+    'modal_my_trips_title' => 'My Trips',
+    'modal_my_trips_desc' => 'List of active and upcoming flights currently monitored by REBOUND.',
+    'active_flight_label' => 'Active Flight',
+    'upcoming_flight_label' => 'Upcoming Flight',
+    'btn_close' => 'Close',
+    
+    // Success Card
+    'rebooking_success_title' => 'Flight Rescheduled Successfully',
+    'rebooking_success_desc' => 'Everything is set. Your new e-ticket has been issued.',
+    'monitoring_continuation' => 'REBOUND will continue monitoring your GA830 flight.',
+    'new_flight_label' => 'New Flight',
+    'departure_countdown_45' => 'Departs in 45 minutes',
+];
