@@ -1,10 +1,11 @@
-{{-- #BACKEND Verifikasi PNR Wajib & Pemindai Barcode / Mandatory PNR Verification & Barcode Scanner Modal
-     id: Modal aktivasi tiket pertama kali. Mengharuskan pengguna menginput kode PNR atau memindai barcode/foto boarding pass.
-         Data validasi PNR harus diverifikasi ke API backend `POST /api/pnr/verify` dan dicocokkan ke database `bookings` serta GDS maskapai.
-         
-     en: Mandatory initial ticket activation modal. Requires users to input a PNR booking code or scan a physical boarding pass barcode/photo.
-         PNR validation must be verified against backend API `POST /api/pnr/verify` and checked against `bookings` database and airline GDS. --}}
-<!-- Mandatory PNR Verification & Barcode Scanner Modal -->
+{{-- #BACKEND Verifikasi PNR Wajib / Mandatory PNR Verification Modal
+     id: Modal aktivasi tiket pertama kali. Mengharuskan pengguna menginput kode PNR dan nama penumpang.
+         Data validasi PNR diverifikasi ke API backend `POST /api/pnr/verify` dan dicocokkan ke tabel Mock GDS maskapai.
+         Fitur pemindaian barcode telah dihapus untuk menghemat waktu pengembangan.
+     en: Mandatory initial ticket activation modal. Requires users to input a PNR booking code and passenger name.
+         PNR validation is verified against backend API `POST /api/pnr/verify` and checked against the airline Mock GDS table.
+         The barcode scanning feature has been removed to save development time. --}}
+<!-- Mandatory PNR Verification Modal -->
 <div x-show="!hasSetupPnr || showAddTicketModal" 
      x-cloak
      class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
@@ -13,22 +14,16 @@
      x-transition:enter-end="opacity-100"
      x-transition:leave="transition ease-in duration-100"
      x-transition:leave-start="opacity-100"
-     x-transition:leave-end="opacity-0">
-    
-    <div class="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 text-left relative overflow-hidden space-y-3.5"
-         x-data="{
+     x-transition:leave-end="opacity-0"
+     x-data="{
              // id: State lokal untuk modal PNR
              // en: Local state for PNR onboarding modal
-             scanMode: 'input', // 'input', 'camera', 'upload'
              pnrInput: '',
              passengerInput: '',
              isVerifying: false,
-             scanSuccess: false,
-             cameraActive: false,
              errorMessage: null,
              errorTitle: null,
              isShaking: false,
-             uploadedImagePreview: null,
 
              // id: clearError() — Mereset pesan error validasi PNR
              // en: clearError() — Resets PNR validation error message
@@ -46,77 +41,22 @@
                  setTimeout(() => { this.isShaking = false; }, 400);
              },
 
-             // id: startCamera() — Mengaktifkan kamera pengguna untuk memindai barcode fisik secara live
-             // en: startCamera() — Starts user camera feed to live-scan physical barcode
-             // #BACKEND id: Di produksi: integrasikan library ZXing / BarcodeDetector API untuk decode IATA BCBP
-             // #BACKEND en: In production: integrate ZXing / BarcodeDetector API to decode standard IATA BCBP
-             startCamera() {
-                 this.scanMode = 'camera';
-                 this.clearError();
-                 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                         .then(stream => {
-                             const video = document.getElementById('pnr-scanner-video');
-                             if (video) {
-                                 video.srcObject = stream;
-                                 video.play();
-                                 this.cameraActive = true;
-                             }
-                         })
-                         .catch(() => {
-                             this.cameraActive = false;
-                         });
-                 }
+             // id: closeModal() — Menutup modal via klik di luar area atau tombol ESC.
+             //     Modal aktivasi pertama kali (mandatory) tidak dapat ditutup sampai PNR berhasil diverifikasi.
+             // en: closeModal() — Closes the modal via outside click or ESC key.
+             //     The mandatory first-time activation modal cannot be closed until a PNR is verified.
+             closeModal() {
+                 if (!hasSetupPnr) return;
+                 showAddTicketModal = false;
              },
 
-             // id: handleImageUpload(e) — Membaca file gambar foto boarding pass yang diunggah pengguna
-             // en: handleImageUpload(e) — Reads uploaded boarding pass image file
-             // #BACKEND id: Unggah gambar ke backend POST /api/pnr/scan-image untuk OCR/Barcode decoding otomatis
-             // #BACKEND en: Upload image to backend POST /api/pnr/scan-image for automated OCR/Barcode decoding
-             handleImageUpload(e) {
-                 const file = e.target.files && e.target.files[0];
-                 if (!file) return;
-                 this.clearError();
-                 const reader = new FileReader();
-                 reader.onload = (event) => {
-                     this.uploadedImagePreview = event.target.result;
-                     this.isVerifying = true;
-                     setTimeout(() => {
-                         this.isVerifying = false;
-                         this.scanSuccess = true;
-                         // id: Simulasi deteksi tiket Singapore Airlines SQ951 dari foto boarding pass pengguna
-                         // en: Simulated detection of Singapore Airlines SQ951 ticket from user boarding pass photo
-                         this.pnrInput = 'SQ-951A';
-                         this.passengerInput = 'ISTIQOMAH ASSYFA OCTAVIYANI MRS';
-                         setTimeout(() => {
-                             this.submitPnr();
-                         }, 600);
-                     }, 900);
-                 };
-                 reader.readAsDataURL(file);
-             },
-
-             // id: scanSimulated(pnrCode, paxName, flightId) — Helper untuk uji coba cepat pemindaian barcode
-             // en: scanSimulated(pnrCode, paxName, flightId) — Helper for quick simulated barcode scanning tests
-             scanSimulated(pnrCode, paxName, flightId) {
-                 this.clearError();
-                 this.isVerifying = true;
-                 setTimeout(() => {
-                     this.isVerifying = false;
-                     this.scanSuccess = true;
-                     this.pnrInput = pnrCode;
-                     this.passengerInput = paxName;
-                     setTimeout(() => {
-                         this.submitPnr(flightId);
-                     }, 500);
-                 }, 800);
-             },
-
-             // id: submitPnr(forcedFlightId) — Memvalidasi dan mengaktifkan tiket berdasarkan PNR yang diinput
-             // en: submitPnr(forcedFlightId) — Validates and activates ticket based on provided PNR code
-             // #BACKEND id: Panggil API backend POST /api/pnr/verify dengan body { pnr: pnrInput, passenger: passengerInput }
-             // #BACKEND en: Call backend API POST /api/pnr/verify with body { pnr: pnrInput, passenger: passengerInput }
-             submitPnr(forcedFlightId = null) {
+             // id: submitPnr() — Memvalidasi dan mengaktifkan tiket berdasarkan PNR yang diinput
+             // en: submitPnr() — Validates and activates ticket based on provided PNR code
+             // id: Input manual diverifikasi secara asli ke GDS via POST /api/pnr/verify; jika Atlas menjawab valid,
+             //     Laravel mencatat kode PNR + ID user yang login ke tabel user_pnrs di MySQL (rebound_db).
+             // en: Manual input is verified against the real GDS via POST /api/pnr/verify; when Atlas answers valid,
+             //     Laravel records the PNR code + logged-in user ID in the user_pnrs table in MySQL (rebound_db).
+             submitPnr() {
                  this.clearError();
                  const pnr = (this.pnrInput || '').trim().toUpperCase();
 
@@ -125,47 +65,89 @@
                      return;
                  }
 
+                 const passenger = (this.passengerInput || '').trim();
+
+                 if (!passenger) {
+                     this.triggerError('Nama Penumpang Wajib Diisi', 'Masukkan nama penumpang sesuai tiket Anda untuk verifikasi GDS.');
+                     return;
+                 }
+
                  this.isVerifying = true;
 
-                 setTimeout(() => {
+                 fetch('/api/pnr/verify', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                     body: JSON.stringify({ pnr: pnr, passenger: passenger })
+                 })
+                 .then(response => response.json().then(data => ({ response, data })))
+                 .then(({ response, data }) => {
                      this.isVerifying = false;
 
-                     // id: Validasi PNR ke database/GDS. Di produksi digantikan respons API backend
-                     // en: PNR validation against DB/GDS. In production replaced by backend API response
-                     if (forcedFlightId === 'SQ951' || pnr.includes('951') || pnr.includes('00050') || pnr.includes('00051') || pnr.includes('ISTIQOMAH') || pnr.includes('MAULANA') || pnr.includes('KFLY')) {
-                         this.scanSuccess = true;
+                     if (response.ok && data.status === 'success') {
+                         const pnrCode = (data.data && data.data.pnr_code) || pnr.replace(/[^A-Z0-9]/g, '');
+
                          hasSetupPnr = true;
                          showAddTicketModal = false;
                          localStorage.setItem('rebound_has_setup_pnr', 'true');
-                         if (this.passengerInput) {
-                             currentUser.name = this.passengerInput.replace(' MRS', '').replace(' MR', '');
-                         } else {
-                             currentUser.name = 'Istiqomah Assyfa';
+                         currentUser.name = passenger.replace(' MRS', '').replace(' MR', '');
+                         // id: Tambahkan tiket baru ke daftar tiket DB agar langsung tampil saat modal dibuka lagi
+                         // en: Add the new ticket to the DB ticket list so it shows up next time the modal opens
+                         if (Array.isArray(userTickets) && !userTickets.some(ticket => ticket.pnr_code === pnrCode)) {
+                             userTickets.unshift({ pnr_code: pnrCode, last_name: passenger, status: 'active' });
                          }
-                         selectTicket('SQ951');
-                         showToast(lang === 'id' ? 'Tiket SQ951 Business Class Terverifikasi!' : 'SQ951 Business Class Verified!');
-                     } else if (forcedFlightId === 'GA826' || pnr.includes('GA') || pnr.includes('9821') || pnr.includes('826')) {
-                         this.scanSuccess = true;
-                         hasSetupPnr = true;
-                         showAddTicketModal = false;
-                         localStorage.setItem('rebound_has_setup_pnr', 'true');
-                         selectTicket('GA826');
-                         showToast(lang === 'id' ? 'Tiket GA-9821A aktif!' : 'Ticket GA-9821A active!');
-                     } else if (forcedFlightId === 'SQ638' || pnr.includes('638') || pnr.includes('4109')) {
-                         this.scanSuccess = true;
-                         hasSetupPnr = true;
-                         showAddTicketModal = false;
-                         localStorage.setItem('rebound_has_setup_pnr', 'true');
-                         selectTicket('SQ638');
-                         showToast(lang === 'id' ? 'Tiket SQ-4109B aktif!' : 'Ticket SQ-4109B active!');
+                         selectTicket(pnrCode);
+                         showToast(lang === 'id' ? 'PNR valid menurut GDS Atlas! Tiket ' + pnrCode + ' aktif.' : 'PNR valid per GDS Atlas! Ticket ' + pnrCode + ' active.');
                      } else {
-                         // id: PNR tidak valid / tidak ditemukan di database
-                         // en: Invalid / Unrecognized PNR not found in database
-                         this.triggerError('Informasi Tidak Ditemukan', 'Informasi tidak dapat diambil. Cek ulang kode PNR Anda.');
+                         // id: GDS Atlas menyatakan PNR tidak valid / tidak ditemukan
+                         // en: The Atlas GDS declared the PNR invalid / not found
+                         this.triggerError('PNR Tidak Valid', data.message || 'PNR tidak ditemukan di GDS Atlas. Cek ulang kode PNR dan nama penumpang Anda.');
                      }
-                 }, 400);
+                 })
+                 .catch(() => {
+                     this.isVerifying = false;
+                     this.triggerError('Gangguan Sistem', 'Tidak dapat menghubungi sistem verifikasi GDS. Silakan coba lagi.');
+                 });
+             },
+
+             // id: activateOnServer(ticketKey) — Menyimpan PNR yang terverifikasi ke database via POST /api/pnr/activate
+             //     agar status aktivasi (hasSetupPnr) bertahan setelah halaman di-refresh, bukan hanya di localStorage.
+             // en: activateOnServer(ticketKey) — Persists the verified PNR to the database via POST /api/pnr/activate
+             //     so the activation state (hasSetupPnr) survives a page refresh, not just in localStorage.
+             activateOnServer(ticketKey) {
+                 fetch('/api/pnr/activate', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'Accept': 'application/json',
+                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                     },
+                     body: JSON.stringify({
+                         pnr_code: ticketKey,
+                         last_name: (this.passengerInput || '').trim() || null,
+                     })
+                 }).catch(() => {});
+             },
+
+             // id: activateDbTicket(ticket) — Mengaktifkan kembali tiket asli milik user yang diambil dari
+             //     database (tabel user_pnrs); riwayat chat untuk tiket tersebut dimuat otomatis oleh selectTicket().
+             // en: activateDbTicket(ticket) — Re-activates a real ticket belonging to the user taken from the
+             //     database (user_pnrs table); its chat history is loaded automatically by selectTicket().
+             activateDbTicket(ticket) {
+                 this.clearError();
+                 this.pnrInput = ticket.pnr_code;
+                 this.passengerInput = ticket.last_name || '';
+                 hasSetupPnr = true;
+                 showAddTicketModal = false;
+                 localStorage.setItem('rebound_has_setup_pnr', 'true');
+                 selectTicket(ticket.pnr_code);
+                 this.activateOnServer(ticket.pnr_code);
+                 showToast(lang === 'id' ? 'Tiket ' + ticket.pnr_code + ' aktif!' : 'Ticket ' + ticket.pnr_code + ' active!');
              }
-         }">
+         }"
+         @click.self="closeModal()"
+         @keydown.escape.window="closeModal()">
+
+        <div class="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 text-left relative overflow-hidden space-y-3.5">
 
         {{-- id: Header Modal Aktivasi PNR
              en: PNR Activation Modal Header --}}
@@ -175,29 +157,13 @@
                 <h3 class="text-base font-bold text-slate-900"
                     x-text="lang === 'id' ? 'Aktivasi Tiket PNR' : 'Activate Ticket PNR'"></h3>
                 <p class="text-xs text-slate-500 mt-0.5"
-                   x-text="lang === 'id' ? 'Masukkan atau scan kode PNR untuk menampilkan jadwal.' : 'Enter or scan PNR code to retrieve flight schedule.'"></p>
+                   x-text="lang === 'id' ? 'Masukkan kode PNR untuk menampilkan jadwal.' : 'Enter PNR code to retrieve flight schedule.'"></p>
             </div>
             <template x-if="hasSetupPnr">
-                <button @click="showAddTicketModal = false" class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer">
+                <button @click="closeModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer">
                     <i class="fa-solid fa-xmark text-xs"></i>
                 </button>
             </template>
-        </div>
-
-        <!-- Mode Switcher: Input Manual vs Scan Barcode -->
-        <div class="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
-            <button @click="scanMode = 'input'; clearError()"
-                    :class="scanMode === 'input' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'"
-                    class="flex-1 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition cursor-pointer">
-                <i class="fa-solid fa-keyboard text-[11px]"></i>
-                <span x-text="lang === 'id' ? 'Input PNR' : 'Manual PNR'"></span>
-            </button>
-            <button @click="startCamera()"
-                    :class="scanMode === 'camera' || scanMode === 'upload' ? 'bg-white text-brand-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'"
-                    class="flex-1 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition cursor-pointer">
-                <i class="fa-solid fa-barcode text-[11px]"></i>
-                <span x-text="lang === 'id' ? 'Scan Barcode' : 'Scan Barcode'"></span>
-            </button>
         </div>
 
         <!-- Error Alert Callout Box -->
@@ -214,103 +180,10 @@
             </button>
         </div>
 
-        <!-- VIEW 1: Scan Barcode (Camera & Image Upload) -->
-        <div x-show="scanMode === 'camera' || scanMode === 'upload'" class="space-y-2.5">
-            
-            <!-- Camera / Scan Viewport -->
-            <div class="relative w-full aspect-[2.4/1.3] bg-slate-950 rounded-lg overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
-                <!-- Video Stream Feed -->
-                <video id="pnr-scanner-video" class="absolute inset-0 w-full h-full object-cover" playsinline autoplay muted></video>
-
-                <!-- Dark Translucent Mask -->
-                <div class="absolute inset-0 bg-slate-950/40 pointer-events-none"></div>
-
-                <!-- Professional Viewfinder Target Box with Crisp Precision Corners -->
-                <div class="relative w-[76%] h-[125px] pointer-events-none overflow-hidden">
-                    <!-- Top-Left Corner -->
-                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"></div>
-                    <!-- Top-Right Corner -->
-                    <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"></div>
-                    <!-- Bottom-Left Corner -->
-                    <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"></div>
-                    <!-- Bottom-Right Corner -->
-                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"></div>
-
-                    <!-- Smooth Hardware-Accelerated 60fps Laser Scan Beam -->
-                    <div class="scanner-laser-line"></div>
-                </div>
-
-                <!-- Scan Success Overlay -->
-                <div x-show="scanSuccess" 
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0 scale-95"
-                     x-transition:enter-end="opacity-100 scale-100"
-                     class="absolute inset-0 bg-emerald-600/95 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-1.5 font-bold text-xs z-20">
-                    <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-check text-white"></i>
-                    </div>
-                    <span class="text-xs font-bold">Barcode Terverifikasi!</span>
-                </div>
-            </div>
-
-            <!-- Clear Helper Text Outside Viewport (Never overlaps laser) -->
-            <p class="text-center text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5 py-0.5">
-                <i class="fa-solid fa-barcode text-brand-600 text-xs"></i>
-                <span x-text="lang === 'id' ? 'Posisikan barcode boarding pass di dalam bingkai' : 'Align boarding pass barcode within frame'"></span>
-            </p>
-
-            <!-- Action Controls: Upload & Capture -->
-            <div class="grid grid-cols-2 gap-2 pt-0.5">
-                <label class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer text-center shadow-2xs border border-slate-200/80">
-                    <i class="fa-solid fa-cloud-arrow-up text-brand-600 text-xs"></i>
-                    <span>Upload Foto</span>
-                    <input type="file" accept="image/*" @change="handleImageUpload($event)" class="hidden">
-                </label>
-
-                <button type="button"
-                        @click="scanSimulated('SQ-951A', 'ISTIQOMAH ASSYFA OCTAVIYANI MRS', 'SQ951')"
-                        :disabled="isVerifying"
-                        class="py-2 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
-                    <i class="fa-solid fa-camera text-xs" x-show="!isVerifying"></i>
-                    <i class="fa-solid fa-circle-notch fa-spin text-xs" x-show="isVerifying"></i>
-                    <span x-text="isVerifying ? 'Memindai...' : 'Pindai Tiket'"></span>
-                </button>
-            </div>
-        </div>
-
-        <style>
-            @keyframes scanLaserTransform {
-                0% {
-                    transform: translateY(0px);
-                    opacity: 0.3;
-                }
-                15% {
-                    opacity: 1;
-                }
-                85% {
-                    opacity: 1;
-                }
-                100% {
-                    transform: translateY(123px);
-                    opacity: 0.3;
-                }
-            }
-            .scanner-laser-line {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 2px;
-                background: linear-gradient(90deg, transparent 0%, #38bdf8 20%, #22d3ee 50%, #38bdf8 80%, transparent 100%);
-                box-shadow: 0 0 12px 2px rgba(34, 211, 238, 0.9), 0 0 4px 1px rgba(56, 189, 248, 1);
-                animation: scanLaserTransform 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
-                pointer-events: none;
-                will-change: transform, opacity;
-            }
-        </style>
-
-        <!-- VIEW 2: Manual Input Form -->
-        <div x-show="scanMode === 'input'" class="space-y-3">
+        {{-- id: Formulir Input Manual — satu-satunya jalur aktivasi setelah fitur scan barcode dihapus
+             en: Manual Input Form — the only activation path after the barcode scan feature was removed --}}
+        <!-- Manual Input Form -->
+        <div class="space-y-3">
             
             <!-- PNR Code Field -->
             <div>
@@ -357,37 +230,37 @@
 
         </div>
 
-        <!-- Quick Test Scenarios (Termasuk Singapore Airlines Business Class dari Foto Boarding Pass) -->
+        {{-- id: Daftar Tiket dari Database — menggantikan skenario "Uji Coba Tiket" statis. Data diambil dari
+             tabel user_pnrs milik user yang login (diteruskan route dashboard sebagai $userTickets).
+             en: Database Ticket List — replaces the static "Test Scenarios". Data comes from the logged-in
+             user's user_pnrs table (passed by the dashboard route as $userTickets). --}}
+        <!-- User Tickets from Database -->
         <div class="pt-2 border-t border-slate-100">
-            <div class="text-[10px] font-semibold text-slate-400 mb-1.5">Uji Coba Tiket:</div>
-            <div class="space-y-1.5">
-                <!-- Test 1: Singapore Airlines SQ951 Business Class (Dari Foto Boarding Pass Pengguna) -->
-                <button type="button" 
-                        @click="pnrInput = 'SQ-951A'; passengerInput = 'ISTIQOMAH ASSYFA OCTAVIYANI MRS'; submitPnr('SQ951')"
-                        class="w-full p-2 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left text-xs transition cursor-pointer flex items-center justify-between group">
-                    <div>
-                        <div class="font-bold text-[11px] text-brand-900 flex items-center gap-1.5">
-                            <span>SQ951 (CGK → SIN)</span>
-                            <span class="px-1.5 py-0.2 bg-blue-100 text-brand-800 text-[9px] font-bold rounded">Business Class</span>
-                        </div>
-                        <div class="text-[10px] text-slate-500">Istiqomah Assyfa • Gate 6 • Seat 23A</div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-brand-600 text-[10px]"></i>
-                </button>
+            <div class="text-[10px] font-semibold text-slate-400 mb-1.5"
+                 x-text="lang === 'id' ? 'Tiket Anda dari Database:' : 'Your Tickets from Database:'"></div>
 
-                <!-- Test 2: Garuda Indonesia GA826 (Delay +4j) -->
-                <button type="button" 
-                        @click="pnrInput = 'GA-9821A'; passengerInput = currentUser.name; submitPnr('GA826')"
-                        class="w-full p-2 rounded-lg border border-amber-200 bg-amber-50/40 hover:bg-amber-50 text-left text-xs transition cursor-pointer flex items-center justify-between group">
-                    <div>
-                        <div class="font-bold text-[11px] text-amber-950 flex items-center gap-1.5">
-                            <span>GA826 (CGK → SIN)</span>
-                            <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">Delay +4h</span>
+            <template x-if="userTickets.length === 0">
+                <p class="text-[10.5px] text-slate-400 bg-slate-50 border border-slate-200/70 rounded-lg p-2 leading-relaxed"
+                   x-text="lang === 'id' ? 'Belum ada tiket tersimpan. Masukkan kode PNR Anda di atas.' : 'No saved tickets yet. Enter your PNR code above.'"></p>
+            </template>
+
+            <div class="space-y-1.5">
+                <template x-for="ticket in userTickets" :key="ticket.pnr_code">
+                    <button type="button"
+                            @click="activateDbTicket(ticket)"
+                            class="w-full p-2 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-left text-xs transition cursor-pointer flex items-center justify-between group">
+                        <div>
+                            <div class="font-bold text-[11px] text-brand-900 flex items-center gap-1.5">
+                                <span x-text="ticket.pnr_code"></span>
+                                <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded"
+                                      x-show="ticket.status === 'active'"
+                                      x-text="lang === 'id' ? 'Aktif' : 'Active'"></span>
+                            </div>
+                            <div class="text-[10px] text-slate-500" x-text="ticket.last_name"></div>
                         </div>
-                        <div class="text-[10px] text-slate-500">Kompensasi & Opsi Rebooking Aktif</div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-amber-600 text-[10px]"></i>
-                </button>
+                        <i class="fa-solid fa-chevron-right text-brand-600 text-[10px]"></i>
+                    </button>
+                </template>
             </div>
         </div>
 

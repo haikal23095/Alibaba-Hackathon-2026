@@ -13,6 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // id: Aktifkan Sanctum stateful API agar sesi login dari browser (cookie)
+        //     dikenali oleh route /api/* — tanpa ini auth:sanctum membalas 401
+        //     untuk request dari SPA meski user sudah login.
+        // en: Enable Sanctum stateful API so the browser login session (cookie)
+        //     is recognized by /api/* routes — without this, auth:sanctum answers 401
+        //     for SPA requests even though the user is already logged in.
+        $middleware->statefulApi();
+
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);

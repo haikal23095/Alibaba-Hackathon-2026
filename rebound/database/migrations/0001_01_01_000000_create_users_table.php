@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('firebase_uid')->unique(); // ID unik dari Firebase Google Login
+            $table->string('firebase_uid')->nullable()->unique(); // ID unik dari Firebase Google Login (null untuk user lokal/demo)
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();

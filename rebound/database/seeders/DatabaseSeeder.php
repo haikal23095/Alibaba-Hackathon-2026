@@ -37,5 +37,9 @@ class DatabaseSeeder extends Seeder
                 $userData
             );
         }
+
+        // id: Isi GDS tiruan dengan booking demo untuk verifikasi PNR
+        // en: Populate the mock GDS with demo bookings for PNR verification
+        $this->call(MockGdsBookingSeeder::class);
     }
 }

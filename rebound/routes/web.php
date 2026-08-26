@@ -3,36 +3,18 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes & Backend API Specifications (ID / EN Documentation)
-|--------------------------------------------------------------------------
-| id: File ini mendefinisikan rute web frontend & blueprint API yang harus disediakan backend:
-|     1. Auth (Firebase ID Token verification, Login, Register, Logout)
-|     2. Lokalisasi / Translation Switcher (/lang/{locale})
-|     3. Dashboard Utama (Dilindungi middleware 'auth')
-|     4. Endpoint API Booking, PNR Verification, & GDS Atlas Rebooking (Akan diimplementasikan)
-|
-| en: This file defines frontend web routes & API blueprints that backend must provide:
-|     1. Auth (Firebase ID Token verification, Login, Register, Logout)
-|     2. Localization / Translation Switcher (/lang/{locale})
-|     3. Main Dashboard (Protected by 'auth' middleware)
-|     4. Booking, PNR Verification, & GDS Atlas Rebooking API Endpoints (To be implemented)
-|--------------------------------------------------------------------------
-*/
-
-// id: Rute Autentikasi Pengguna (Login & Register Form)
-// en: User Authentication Routes (Login & Register Form)
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+// id: Rute Autentikasi Pengguna (Login & Register Form) — hanya untuk guest,
+//     user yang sudah login otomatis dialihkan ke dashboard oleh middleware 'guest'
+// en: User Authentication Routes (Login & Register Form) — guests only,
+//     authenticated users are redirected to the dashboard by the 'guest' middleware
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+});
 
 // id: Autentikasi Firebase (Google Sign-In & Email/Password) - memverifikasi ID Token di server
 // en: Firebase Authentication (Google Sign-In & Email/Password) - verifies ID Token on server
 Route::post('/auth/firebase', [AuthController::class, 'loginWithFirebase'])->name('auth.firebase');
-
-// id: Logout Sesi Pengguna
-// en: User Session Logout
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // id: Pengganti Bahasa (ID / EN) dengan persistensi sesi & respons JSON untuk AJAX
 // en: Language Switcher (ID / EN) with session persistence & JSON response for AJAX
@@ -54,7 +36,28 @@ Route::get('/lang/{locale}', function (string $locale) {
 // id: Dashboard Utama & Asisten Penerbangan REBOUND (Wajib Login)
 // en: Protected Dashboard & REBOUND Flight Assistant (Authentication Required)
 Route::middleware('auth')->group(function () {
+    
     Route::get('/', function () {
-        return view('welcome');
+        $user = auth()->user();
+        
+        // Ambil PNR pertama yang berstatus 'active' milik user
+        $activePnr = $user->pnrs()->where('status', 'active')->first();
+
+        // id: Daftar seluruh PNR asli milik user dari database — dipakai modal aktivasi
+        //     untuk menampilkan tiket nyata, menggantikan skenario uji coba statis.
+        // en: All real PNRs belonging to the user from the database — used by the activation
+        //     modal to display actual tickets instead of static test scenarios.
+        $userTickets = $user->pnrs()
+            ->orderByRaw("status = 'active' desc")
+            ->latest()
+            ->get(['pnr_code', 'last_name', 'status']);
+
+        return view('welcome', [
+            'hasSetupPnr' => $activePnr !== null,
+            'activePnrCode' => $activePnr?->pnr_code,
+            'userTickets' => $userTickets,
+        ]);
     })->name('dashboard');
+
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

@@ -153,46 +153,10 @@
         </button>
     </div>
 
-    <!-- Modal Tambah Tiket Baru PNR -->
-    <div x-show="showAddTicketModal" 
-         x-cloak
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-        <div @click.away="showAddTicketModal = false"
-             class="bg-white rounded-xl max-w-md w-full p-5 shadow-xl border border-slate-200 space-y-3.5 text-left">
-            
-            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-md bg-brand-50 text-brand-600 flex items-center justify-center text-xs">
-                        <i class="fa-solid fa-ticket"></i>
-                    </div>
-                    <h3 class="text-sm font-bold text-slate-900" x-text="lang === 'id' ? 'Pantau Tiket PNR Baru' : 'Monitor New Flight PNR'"></h3>
-                </div>
-                <button @click="showAddTicketModal = false" class="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">
-                    <i class="fa-solid fa-xmark text-xs"></i>
-                </button>
-            </div>
-
-            <div class="space-y-2.5 text-xs">
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1" x-text="t('pnr_input_label')"></label>
-                    <input type="text" :placeholder="t('pnr_input_placeholder')" class="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-brand-500 font-mono uppercase">
-                </div>
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1" x-text="t('passenger_input_label')"></label>
-                    <input type="text" :value="currentUser.name" class="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-brand-500">
-                </div>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button @click="showAddTicketModal = false" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition cursor-pointer"
-                        x-text="t('btn_cancel')">
-                </button>
-                <button @click="showAddTicketModal = false; selectTicket('GA826')" class="flex-1 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-lg transition cursor-pointer"
-                        x-text="t('btn_start_monitor')">
-                </button>
-            </div>
-        </div>
-    </div>
+    {{-- id: Modal "Tambah Tiket Baru PNR" lama dihapus — fungsinya sudah digantikan oleh sections/pnr-onboarding-modal
+         (flag showAddTicketModal yang sama memicu keduanya, sehingga dua overlay menumpuk dan tampilan highlight rusak).
+         en: Removed legacy "Add New PNR Ticket" modal — its function is replaced by sections/pnr-onboarding-modal
+         (the same showAddTicketModal flag drove both, stacking two overlays and breaking the highlight look). --}}
 
     <!-- Alpine.js Main State Management -->
     {{-- #BACKEND
@@ -232,7 +196,9 @@
 
                 // #BACKEND id: hasSetupPnr — Cek apakah user sudah pernah input PNR, saat ini pakai localStorage. Harus dicek dari database (users.has_setup_pnr)
                 // #BACKEND en: hasSetupPnr — Checks if user has ever input PNR, currently uses localStorage. Must check from database (users.has_setup_pnr)
-                hasSetupPnr: (localStorage.getItem('rebound_has_setup_pnr') === 'true' ? true : false),
+                // hasSetupPnr: (localStorage.getItem('rebound_has_setup_pnr') === 'true' ? true : false),
+                // SESUDAH:
+                hasSetupPnr: {{ isset($hasSetupPnr) && $hasSetupPnr ? 'true' : 'false' }},
 
                 // #BACKEND id: hasUnreadNotif — Notifikasi belum dibaca, harus dari database notifications table
                 // #BACKEND en: hasUnreadNotif — Unread notifications, must come from notifications database table
@@ -257,7 +223,14 @@
 
                 // #BACKEND id: selectedTicketId — ID tiket yang sedang dipilih, saat ini hardcode. Harus dari database bookings.id atau bookings.pnr
                 // #BACKEND en: selectedTicketId — Currently selected ticket ID, currently hardcoded. Must be from database bookings.id or bookings.pnr
-                selectedTicketId: 'GA826',
+                // selectedTicketId: 'GA826',
+                selectedTicketId: @json($activePnrCode ?? 'GA826'),
+
+                // id: userTickets — daftar PNR asli milik user dari tabel user_pnrs (dikirim route dashboard),
+                //     ditampilkan di modal aktivasi menggantikan skenario uji coba statis.
+                // en: userTickets — the user's real PNRs from the user_pnrs table (sent by the dashboard route),
+                //     shown in the activation modal instead of static test scenarios.
+                userTickets: @json($userTickets ?? []),
 
                 // id: chatInput — Teks input chat user yang sedang diketik
                 // en: chatInput — User's current chat input text being typed
@@ -403,6 +376,12 @@
                     this.$watch('selectedTicketId', () => this.renderBarcode());
                     this.$watch('activeSidebarTab', () => this.renderBarcode());
                     this.$watch('currentUser', () => this.renderBarcode());
+
+                    // id: Muat riwayat percakapan dari database agar chat bertahan setelah refresh
+                    // en: Load saved chat history from the database so the conversation survives refresh
+                    if (this.hasSetupPnr) {
+                        this.loadChatHistory();
+                    }
                 },
 
                 // id: renderBarcode() — Generate barcode Code128 yang bisa di-scan menggunakan library JsBarcode. Data barcode diambil dari nama penumpang + nomor penerbangan.
@@ -442,8 +421,10 @@
                     name: @json(Auth::user()->name ?? 'Zakaria MP'), 
                     initials: @json(strtoupper(substr(Auth::user()->name ?? 'ZM', 0, 2))), 
                     email: @json(Auth::user()->email ?? 'zakariamp@rebound.ai'), 
-                    passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (MR)'), // #BACKEND id: title MR/MRS harus dari DB | en: MR/MRS title from DB
-                    role: 'Frequent Flyer Platinum' // #BACKEND id: role/tier loyalty dari database | en: loyalty tier from database
+                    // passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (MR)'), // #BACKEND id: title MR/MRS harus dari DB | en: MR/MRS title from DB
+                    // role: 'Frequent Flyer Platinum' // #BACKEND id: role/tier loyalty dari database | en: loyalty tier from database
+                    passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (' . (Auth::user()->title ?? 'MR') . ')'),
+                    role: @json(Auth::user()->loyalty_tier ?? 'Frequent Flyer Platinum')
                 },
 
                 // #BACKEND Flight Data State — SELURUH DATA STATIS
@@ -498,16 +479,7 @@
                 // #BACKEND Chat Messages History
                 // id: Pesan awal & riwayat chat harus diambil dari database messages + di-generate oleh AI API (Qwen) berdasarkan data penerbangan real-time
                 // en: Initial message & chat history must be fetched from messages database + generated by AI API (Qwen) based on real-time flight data
-                messages: [
-                    {
-                        sender: 'ai',
-                        time: '09:35',
-                        type: 'greeting',
-                        textId: 'Halo! Saya sedang memantau penerbangan GA826 Anda ke Singapura. Saat ini penerbangan Anda mengalami keterlambatan 4 jam 25 menit akibat cuaca buruk. Saya sudah mulai memeriksa aturan tiket dan mencari penerbangan alternatif untuk Anda.',
-                        textEn: "Hello! I'm monitoring your flight GA826 to Singapore. Your flight is currently delayed by 4 hours 25 minutes due to bad weather. I have begun checking ticket rules and finding alternative flights for you.",
-                        showRecommendation: true,
-                    }
-                ],
+                messages: [],
 
                 // #BACKEND Select Ticket from Left Sidebar
                 // id: Fungsi selectTicket() masih hardcode data per tiket — harus fetch dari API /api/bookings/{pnr} untuk mendapatkan data real-time
@@ -639,6 +611,12 @@
                             }
                         ];
                     }
+
+                    // id: Muat riwayat chat tersimpan dari database untuk tiket ini — jika ada riwayat,
+                    //     riwayat tersebut menggantikan greeting awal sehingga percakapan lama tetap lanjut.
+                    // en: Load stored chat history from the database for this ticket — if history exists,
+                    //     it replaces the initial greeting so the old conversation continues.
+                    this.loadChatHistory();
                 },
 
                 // id: setStatus(status) — Mengubah status penerbangan secara manual (untuk demo). Jika status 'rebooked', otomatis pindah ke tab jadwal.
@@ -755,7 +733,38 @@
                 // en: sendMessage(customText) — Sends a user chat message. customText is used for clicked prompt suggestions, or takes from chatInput.
                 // #BACKEND id: Pesan user harus dikirim ke API backend POST /api/chat/send, disimpan ke database messages, lalu respons AI dari Qwen API
                 // #BACKEND en: User message must be sent to backend API POST /api/chat/send, saved to messages database, then AI response from Qwen API
-                sendMessage(customText = null) {
+                // id: loadChatHistory() — Mengambil riwayat chat tersimpan dari GET /api/chat/history untuk PNR aktif,
+                //     lalu mengisinya ke array messages agar percakapan tetap ada setelah refresh.
+                // en: loadChatHistory() — Fetches stored chat history from GET /api/chat/history for the active PNR,
+                //     then fills the messages array so the conversation persists after refresh.
+                async loadChatHistory() {
+                    try {
+                        const response = await fetch('/api/chat/history?pnr=' + encodeURIComponent(this.selectedTicketId), {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        const history = (data.messages || []).map(m => ({
+                            sender: m.sender,
+                            time: m.time || '',
+                            type: m.type || 'text',
+                            textId: m.text,
+                            textEn: m.text,
+                            showTicketPolicy: m.showTicketPolicy || false,
+                            showRecommendation: m.showRecommendation || false,
+                        }));
+                        // id: Jika ada riwayat tersimpan, gunakan sebagai isi percakapan (menggantikan greeting awal)
+                        // en: If stored history exists, use it as the conversation content (replaces the initial greeting)
+                        if (history.length > 0) {
+                            this.messages = history;
+                            this.scrollToBottom();
+                        }
+                    } catch (error) {
+                        console.error('Gagal memuat riwayat chat:', error);
+                    }
+                },
+
+                async sendMessage(customText = null) {
                     const text = customText || this.chatInput;
                     if (!text || text.trim() === '') return;
 
@@ -774,53 +783,39 @@
                     // #BACKEND AI Simulated Response
                     // id: Respons AI ini masih simulasi/statis — harus diganti dengan panggilan ke AI API (Qwen/Atlas) untuk respons cerdas real-time
                     // en: This AI response is still simulated/static — must be replaced with AI API call (Qwen/Atlas) for real-time intelligent responses
-                    setTimeout(() => {
-                        this.isTyping = false;
-                        const lower = text.toLowerCase();
+                    try {
+                        // 2. Tembak API Backend Laravel yang terhubung ke Qwen/Qoder
+                        const response = await fetch('/api/chat/send', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                // Pastikan token Sanctum atau CSRF disertakan jika perlu
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ message: text, pnr: this.selectedTicketId })
+                        });
 
-                         if (lower.includes('besok pagi') || lower.includes('cek tiket') || lower.includes('aturan') || lower.includes('policy') || lower.includes('biaya')) {
-                            // id: Respons tipe policy_card — tampilkan kartu kebijakan tiket di chat. Di produksi: query fare_rules dari DB
-                            // en: policy_card response type — shows ticket policy card in chat. In production: query fare_rules from DB
-                            this.messages.push({
-                                sender: 'ai',
-                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                type: 'policy_card',
-                                textId: 'Sedang memeriksa kebijakan tiket Anda...',
-                                textEn: 'Checking your ticket policy...',
-                                showTicketPolicy: true
-                            });
-                        } else if (lower.includes('cuaca') || lower.includes('weather') || lower.includes('kondisi')) {
-                            // id: Respons tipe disruption_alert — tampilkan kartu gangguan + rekomendasi. Di produksi: data dari weather API + GDS status
-                            // en: disruption_alert response type — shows disruption card + recommendation. In production: data from weather API + GDS status
-                            this.messages.push({
-                                sender: 'ai',
-                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                type: 'disruption_alert',
-                                textId: 'Penerbangan GA826 Anda mengalami keterlambatan 4 jam 25 menit akibat cuaca buruk. Saya sudah mulai memeriksa aturan tiket dan mencari penerbangan alternatif untuk Anda.',
-                                textEn: 'Your flight GA826 is delayed 4 hours 25 minutes due to bad weather. I have begun checking ticket rules and finding alternative flights for you.',
-                                showDisruptionProgress: true,
-                                showRecommendation: true
-                            });
-                        } else if (lower.includes('opsi') || lower.includes('lain') || lower.includes('jadwal') || lower.includes('alternative')) {
-                            this.showFlightOptionsModal = true;
-                            this.messages.push({
-                                sender: 'ai',
-                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                type: 'options_list',
-                                textId: 'Berikut daftar penerbangan alternatif dari sistem GDS Atlas maskapai mitra yang tersedia untuk rute Anda hari ini. Seluruh jadwal memenuhi syarat bebas biaya (Waiver 72A).',
-                                textEn: 'Here are the alternative flights from the partner airline GDS Atlas system available for your route today. All schedules are eligible for zero-fee waiver (Waiver 72A).'
-                            });
-                        } else {
-                            this.messages.push({
-                                sender: 'ai',
-                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                type: 'text',
-                                textId: `Saya siap membantu Anda, ${this.currentUser.name}. Saya dapat memberikan update penerbangan, rekomendasi rute alternatif GDS, atau klaim kompensasi gangguan penerbangan.`,
-                                textEn: `I am here to assist you, ${this.currentUser.name}. I can provide flight updates, GDS alternative route recommendations, or flight disruption compensation.`
-                            });
-                        }
+                        const data = await response.json();
+
+                        // 3. Masukkan respons AI asli ke dalam obrolan
+                        this.messages.push({
+                            sender: 'ai',
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            type: data.type || 'text', // BIsa 'text', 'policy_card', dll.
+                            textId: data.replyId,
+                            textEn: data.replyEn,
+                            showTicketPolicy: data.showTicketPolicy || false,
+                            showRecommendation: data.showRecommendation || false,
+                        });
+
+                    } catch (error) {
+                        console.error("Gagal menghubungi AI:", error);
+                        this.showToast("Gagal menghubungi asisten AI. Periksa koneksi Anda.");
+                    } finally {
+                        this.isTyping = false;
                         this.scrollToBottom();
-                    }, 500);
+                    }
                 },
 
                 // #BACKEND Download Official PDF Boarding Pass
