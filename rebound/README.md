@@ -1,58 +1,239 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<div align="center">
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# ✈️ Rebound — Web Application & API Gateway
 
-## About Laravel
+### Post-Booking AI Agent for Flight Crisis Handling & Schedule Changes
+*Built for the **Alibaba Cloud × Atlas Agentic AI Hackathon 2026***
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+[![Laravel](https://img.shields.io/badge/Laravel-13.x-FF2D20?logo=laravel)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?logo=php)](https://php.net)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38BDF8?logo=tailwind-css)](https://tailwindcss.com)
+[![Alpine.js](https://img.shields.io/badge/Alpine.js-3.x-8BC0D0?logo=alpine.js)](https://alpinejs.dev)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+</div>
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 📑 Table of Contents
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- [Overview](#-overview)
+- [Tech Stack & Dependencies](#-tech-stack--dependencies)
+- [Key Features & System Architecture](#-key-features--system-architecture)
+- [Prerequisites](#-prerequisites)
+- [Installation & Quickstart Guide](#-installation--quickstart-guide)
+- [Demo Seed Data & Test PNRs](#-demo-seed-data--test-pnrs)
+- [API Endpoints Reference](#-api-endpoints-reference)
+- [Database Schema](#-database-schema)
+- [AI Agent & GDS Integration](#-ai-agent--gds-integration)
+- [License](#-license)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## 🧭 Overview
 
-## Agentic Development
+**Rebound Application** is the core web client and backend API gateway powering the Rebound Agentic AI platform. 
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+While conventional Online Travel Agencies (OTAs) focus on the **pre-booking** purchase funnel, Rebound operates entirely in the **post-booking** domain. It acts as an autonomous assistant for passengers facing:
+1. **Flight Disruptions** (delays, weather cancellations, gate changes).
+2. **Self-Service Schedule Changes** with policy validation and automated fare rule enforcement.
 
-```bash
-composer require laravel/boost --dev
+The web application features a responsive 3-column dashboard UI built with Laravel Blade, Alpine.js, and Tailwind CSS, backed by a RESTful Laravel backend providing PNR authentication, chat state management, GDS simulation, and Sanctum API security.
 
-php artisan boost:install
+---
+
+## 🧪 Tech Stack & Dependencies
+
+### Backend Framework & Libraries
+- **PHP**: `^8.3`
+- **Laravel Framework**: `^13.17`
+- **Authentication**: Laravel Sanctum (`^4.3`) & Kreait Firebase Laravel SDK (`^7.2`)
+- **Database**: MySQL / SQLite (Eloquent ORM)
+
+### Frontend Engine
+- **Templating**: Laravel Blade (`resources/views`)
+- **Reactivity & Client State**: Alpine.js
+- **Styling**: Tailwind CSS & FontAwesome Icons
+- **Dynamic In-Chat Components**: Custom Blade partials for Boarding Passes, Flight Selection Cards, QR Vouchers, and Policy Rationale Badges.
+
+---
+
+## ✨ Key Features & System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      REBOUND DASHBOARD (Blade + Alpine.js)              │
+│ ┌────────────────────────┐ ┌──────────────────────┐ ┌──────────────────┐ │
+│ │ Left: Trip & Ticket    │ │ Center: AI Agent     │ │ Right: Flight    │ │
+│ │ History                 │ │ Workspace            │ │ & Boarding Details│ │
+│ └────────────────────────┘ └──────────────────────┘ └──────────────────┘ │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ REST API / Axios
+┌────────────────────────────────────▼────────────────────────────────────┐
+│                    LARAVEL 13 API GATEWAY & CONTROLLERS                 │
+│  • AuthController: Firebase / Google OAuth + Sanctum Token Dispatch    │
+│  • FlightController: PNR Verification, Activation & Mock GDS Dispatch   │
+│  • ChatController: Qwen AI Integration & Session State Manager          │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ Eloquent / GDS API
+┌────────────────────────────────────▼────────────────────────────────────┐
+│                           DATABASE & EXTERNAL GDS                       │
+│  • User PNR Registry (user_pnrs)   • Chat Sessions & Messages          │
+│  • Mock GDS Bookings               • Atlas Travel API / Qwen Model Studio│
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+1. **Mandatory PNR Gate**: Flight monitoring and AI interaction are locked until a valid PNR (Booking Reference) is input or scanned.
+2. **Persistent AI Chat History**: Agent interactions are saved per PNR in `agent_chat_sessions` and `chat_messages` so sessions persist smoothly across refreshes.
+3. **Policy-Aware AI Reasoning**: Agent backend validates fare rules before issuing rebooking options or waiver codes (`Rule 72A`).
+4. **Instant Boarding Pass & QR Generation**: Generates digital vouchers and GDS-compliant barcodes inside the dashboard.
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 📋 Prerequisites
 
-## Code of Conduct
+Ensure your development environment meets the following requirements before installation:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- **PHP**: `>= 8.3` (with `pdo`, `mbstring`, `openssl`, `curl`, `json` extensions)
+- **Composer**: `>= 2.x`
+- **Node.js**: `>= 18.x` & **NPM**: `>= 9.x`
+- **Database**: MySQL `>= 8.0` or SQLite `>= 3.35`
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## ⚡ Installation & Quickstart Guide
 
-## License
+Follow these steps to get the application running locally:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 1. Clone & Enter Project Directory
+```bash
+git clone https://github.com/tiarafthzzhr/Alibaba-Hackathon-2026.git
+cd Alibaba-Hackathon-2026/rebound
+```
+
+### 2. Install PHP & Node Dependencies
+```bash
+composer install
+npm install
+```
+
+### 3. Environment Setup
+Copy the example environment file and generate the application key:
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Configure your `.env` file for database connection (e.g., MySQL or SQLite):
+
+*For SQLite (Quick Setup):*
+```env
+DB_CONNECTION=sqlite
+# DB_DATABASE=/absolute/path/to/rebound/database/database.sqlite
+```
+Create the database file if using SQLite:
+```bash
+touch database/database.sqlite
+```
+
+*For MySQL:*
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=rebound_db
+DB_USERNAME=root
+DB_PASSWORD=your_password
+```
+
+### 4. Run Migrations & Seed Database
+Execute the database migrations along with the Mock GDS seeder:
+```bash
+php artisan migrate:fresh --seed
+```
+
+### 5. Build Assets & Start Local Server
+Run Vite build (or dev server) and start the Laravel development server:
+```bash
+# Build frontend assets
+npm run build
+
+# Start local server
+php artisan serve
+```
+
+Access the application at `http://127.0.0.1:8000`.
+
+---
+
+## 🧪 Demo Seed Data & Test PNRs
+
+The database seeder populates the **Mock GDS** (`mock_gds_bookings`) with pre-configured PNR codes for testing and hackathon demonstrations:
+
+| PNR Code | Passenger Last Name | Flight No | Route | Departure | Class | Initial Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `GA826` | `ZAKARIA` | GA 826 | CGK ✈️ SIN | 2026-08-28 08:25 | Economy | ⚠️ **Delayed** |
+| `SQ951` | `MAULANA` | SQ 951 | CGK ✈️ SIN | 2026-08-27 14:10 | Business | ⚠️ **Delayed** |
+| `SQ638` | `ISTIQOMAH` | SQ 638 | CGK ✈️ KUL | 2026-08-29 06:40 | Economy | ✅ On Time |
+| `QZ502` | `AZZAHRA` | QZ 502 | CGK ✈️ KUL | 2026-09-01 11:15 | Economy | ✅ On Time |
+| `JT028` | `ZAKARIA` | JT 028 | CGK ✈️ DPS | 2026-09-03 09:50 | Economy | ❌ Cancelled |
+| `GA826K`| `FIRMANSYAH` | GA 826 | CGK ✈️ SIN | 2026-08-20 08:25 | Economy | 🛈 Flown |
+
+> 💡 **Demo Tip:** Use `PNR: GA826` and `Passenger: ZAKARIA` in the onboarding modal to test proactive disruption handling.
+
+---
+
+## 🔌 API Endpoints Reference
+
+### Public / Health
+- `GET /api/health` — Checks application, MySQL database connection, and GDS Atlas status.
+
+### Authentication
+- `POST /api/login/google` — Authenticates Firebase Google ID Token and issues a Laravel Sanctum bearer token.
+
+### Flight & PNR Verification (Sanctum Protected)
+- `POST /api/pnr/lookup` — Queries PNR against Mock GDS & verifies passenger last name match.
+- `POST /api/pnr/verify` — Validates PNR against GDS and records active ownership in `user_pnrs`.
+- `POST /api/pnr/activate` — Sets active PNR context for the current user session.
+- `GET /api/flights/alternatives?from=CGK&to=SIN` — Fetches real-time alternative flights from GDS Atlas sandbox.
+- `POST /api/flights/rebook` — Dispatches automated ticket reissuance transaction.
+
+### AI Agent Chat Engine (Sanctum Protected)
+- `POST /api/chat/send` — Sends user message to Agentic AI (Qwen/Qoder), stores response, and returns dynamic UI card payloads.
+- `GET /api/chat/history?pnr=GA826` — Fetches stored conversation history for the active PNR.
+
+---
+
+## 🗄 Database Schema
+
+The database architecture consists of 7 core tables:
+
+1. `users` — Store user accounts, Firebase UIDs, and avatars.
+2. `user_pnrs` — Links users to verified active booking codes (`pnr_code`, `last_name`, `status`).
+3. `mock_gds_bookings` — Mock GDS table seeding authoritative booking data (`pnr_code`, `last_name`, `flight_number`, `from_code`, `to_code`, `departure_time`, `cabin_class`, `status`).
+4. `agent_chat_sessions` — Manages PNR-specific chat sessions.
+5. `chat_messages` — Stores user/agent messages and `dynamic_ui_payload` JSON.
+6. `agent_action_logs` — Audits agent tool executions (`action_type`, `payload`, `status`).
+7. `compensation_vouchers` — Tracks issued crisis vouchers & QR payload keys.
+
+---
+
+## 🤖 AI Agent & GDS Integration
+
+Rebound's AI agent operates via the **ReAct (Reason + Act)** pattern:
+
+```
+User Query ➔ Intent Classification ➔ Read Fare Rules ➔ Search Alternatives ➔ Present Dynamic UI Card ➔ Reissue Ticket
+```
+
+The agent backend connects to **Alibaba Cloud Model Studio (Qwen)** and executes GDS operations via the **Atlas Travel API**, ensuring every proposed change is backed by validated airline fare rules.
+
+---
+
+## 📄 License
+
+This application is open-sourced under the [MIT License](../LICENSE).
+
+<div align="center">
+  <sub>Built with ❤️ for the Alibaba Cloud × Atlas Agentic AI Hackathon 2026</sub>
+</div>

@@ -45,49 +45,56 @@
             </button>
         </div>
 
-        {{-- #BACKEND Daftar Tiket Perjalanan User
-             id: Item tiket di bawah saat ini hardcoded. Di backend: loop dari collection $bookings.
-             en: Ticket items below are currently hardcoded. In backend: loop from $bookings collection. --}}
-        <!-- Trip Cards List -->
-        <div class="space-y-2">
-            {{-- id: Tiket Aktif (GA826)
-                 en: Active Trip Item (GA826) --}}
-            <!-- Active Trip Item -->
-            <div @click="showMyTripsModal = false; selectTicket('GA826')"
-                 class="p-3 rounded-lg border-2 border-brand-500 bg-blue-50/40 hover:bg-blue-50/70 cursor-pointer transition flex items-center justify-between shadow-2xs">
-                <div class="space-y-0.5">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-900">CGK → SIN</span>
-                        <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9.5px] font-bold"
-                              x-text="lang === 'id' ? 'Terlambat +4j' : 'Delayed +4h'"></span>
-                    </div>
-                    <p class="text-[11px] text-slate-500">Garuda Indonesia (GA826) • 30 Nov 2026</p>
+        {{-- id: Daftar Tiket Perjalanan User (Dinamis dari DB chatSessions)
+             en: User Trip Cards List (Dynamic from DB chatSessions) --}}
+        <!-- Trip Cards List (Dynamic from DB) -->
+        <div class="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+            <template x-if="chatSessions && chatSessions.length > 0">
+                <div class="space-y-1.5">
+                    <template x-for="ticket in chatSessions" :key="ticket.id">
+                        <div @click="showMyTripsModal = false; selectTicket(ticket.pnr_code)"
+                             :class="selectedTicketId === ticket.pnr_code ? 'p-3 rounded-lg border-2 border-brand-500 bg-blue-50/60 hover:bg-blue-50 cursor-pointer transition flex items-center justify-between shadow-2xs' : 'p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition flex items-center justify-between shadow-2xs'">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-slate-900" x-text="(ticket.flight_number || ticket.pnr_code) + ' • ' + (ticket.from_code || 'CGK') + ' → ' + (ticket.to_code || 'SIN')"></span>
+                                    
+                                    <template x-if="ticket.status === 'delayed'">
+                                        <span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9.5px] font-bold"
+                                              x-text="lang === 'id' ? 'Terlambat' : 'Delayed'"></span>
+                                    </template>
+                                    <template x-if="ticket.status === 'on_time' || ticket.status === 'active'">
+                                        <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9.5px] font-bold"
+                                              x-text="ticket.cabin_class === 'Business' ? 'Business' : (lang === 'id' ? 'Tepat Waktu' : 'On Time')"></span>
+                                    </template>
+                                    <template x-if="ticket.status === 'cancelled'">
+                                        <span class="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded text-[9.5px] font-bold"
+                                              x-text="lang === 'id' ? 'Dibatalkan' : 'Cancelled'"></span>
+                                    </template>
+                                    <template x-if="ticket.status === 'flown' || ticket.status === 'completed'">
+                                        <span class="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9.5px] font-medium"
+                                              x-text="lang === 'id' ? 'Selesai' : 'Completed'"></span>
+                                    </template>
+                                </div>
+                                <p class="text-[11px] text-slate-500" x-text="'PNR: ' + ticket.pnr_code + (ticket.departure_time ? ' • ' + ticket.departure_time : '')"></p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs" :class="selectedTicketId === ticket.pnr_code ? 'text-brand-600 font-bold' : 'text-slate-400'"></i>
+                        </div>
+                    </template>
                 </div>
-                <i class="fa-solid fa-chevron-right text-xs text-brand-600"></i>
-            </div>
+            </template>
 
-            {{-- id: Tiket Mendatang (SQ638)
-                 en: Future Trip Item (SQ638) --}}
-            <!-- Future Trip Item -->
-            <div @click="showMyTripsModal = false; selectTicket('SQ638')"
-                 class="p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition flex items-center justify-between shadow-2xs">
-                <div class="space-y-0.5">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-900">SIN → HND</span>
-                        <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9.5px] font-bold"
-                              x-text="lang === 'id' ? 'Tepat Waktu' : 'On Time'"></span>
-                    </div>
-                    <p class="text-[11px] text-slate-500">Singapore Airlines (SQ638) • 05 Des 2026</p>
+            <template x-if="!chatSessions || chatSessions.length === 0">
+                <div class="p-4 text-center text-xs text-slate-400">
+                    <span x-text="lang === 'id' ? 'Belum ada tiket tersimpan di akun Anda.' : 'No saved tickets found in your account.'"></span>
                 </div>
-                <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
-            </div>
+            </template>
         </div>
 
         {{-- id: Tombol Aksi (Tambah Tiket Baru & Tutup)
              en: Action Buttons (Add New Ticket & Close) --}}
         <!-- Action buttons -->
         <div class="pt-2 space-y-1.5">
-            <button @click="showMyTripsModal = false; hasSetupPnr = false"
+            <button @click="showMyTripsModal = false; showAddTicketModal = true"
                     class="w-full py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-plus text-[10px]"></i>
                 <span x-text="lang === 'id' ? 'Tambah Tiket Baru' : 'Add New Ticket'"></span>
@@ -97,5 +104,6 @@
                 <span x-text="lang === 'id' ? 'Tutup' : 'Close'"></span>
             </button>
         </div>
+
     </div>
 </div>

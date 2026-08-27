@@ -35,151 +35,86 @@
 
     {{-- id: Container Daftar Riwayat Tiket
          en: Ticket History List Container --}}
-    <!-- Ticket History List (Clean Enterprise Style) -->
+    {{-- id: Container Daftar Riwayat Chat AI Agent & Tiket (Dinamis dari DB)
+         en: AI Agent Chat Session & Ticket History List Container (Dynamic from DB) --}}
+    <!-- Ticket & AI Chat History List (Clean Enterprise Style) -->
     <div class="flex-1 overflow-y-auto px-2 py-2 space-y-3">
         
-        {{-- id: Kategori 1: Penerbangan yang Sedang Aktif Dipantau
-             en: Category 1: Actively Monitored Flights --}}
-        <!-- Category 1: Sedang Dipantau (Active) -->
-        <div>
-            <div class="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                <span x-text="lang === 'id' ? 'Aktif Dipantau' : 'Active Monitoring'"></span>
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        {{-- id: Tampilan Riwayat Chat Sesi AI Agent dari Database (agent_chat_sessions) --}}
+        <template x-if="filteredChatSessions && filteredChatSessions.length > 0">
+            <div>
+                <div class="px-1.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span x-text="lang === 'id' ? 'Riwayat Chat AI Agent' : 'AI Agent Chat Sessions'"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <template x-for="session in filteredChatSessions" :key="session.id">
+                        <button @click="selectTicket(session.pnr_code)"
+                                :class="selectedTicketId === session.pnr_code ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
+                                class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1.5 shadow-2xs group cursor-pointer relative overflow-hidden">
+                            
+                            <!-- Header Penerbangan & Rute -->
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold flex items-center gap-1.5 text-slate-900 text-xs truncate">
+                                    <i class="fa-solid fa-plane-departure text-brand-600 text-[10px]" x-show="session.status === 'delayed' || session.status === 'active'"></i>
+                                    <i class="fa-solid fa-plane text-slate-400 text-[10px]" x-show="session.status !== 'delayed' && session.status !== 'active'"></i>
+                                    <span x-text="(session.flight_number || session.pnr_code) + ' • ' + (session.from_code || 'CGK')"></span>
+                                    <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
+                                    <span x-text="session.to_code || 'SIN'"></span>
+                                </span>
+
+                                <!-- Status Badge Dinamis -->
+                                <template x-if="session.status === 'delayed'">
+                                    <span class="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                                        +4j 25m
+                                    </span>
+                                </template>
+                                <template x-if="session.status === 'on_time' || session.status === 'active'">
+                                    <span class="text-[9.5px] font-medium px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          x-text="session.cabin_class === 'Business' ? 'Business' : (lang === 'id' ? 'Tepat Waktu' : 'On Time')">
+                                    </span>
+                                </template>
+                                <template x-if="session.status === 'cancelled'">
+                                    <span class="text-[9.5px] font-medium px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200"
+                                          x-text="lang === 'id' ? 'Dibatalkan' : 'Cancelled'">
+                                    </span>
+                                </template>
+                                <template x-if="session.status === 'flown' || session.status === 'completed'">
+                                    <span class="text-[9.5px] text-slate-400 font-medium" x-text="lang === 'id' ? 'Selesai' : 'Completed'"></span>
+                                </template>
+                            </div>
+
+                            <!-- Preview Pesan / Ringkasan Konteks AI Agent -->
+                            <div class="flex items-start gap-1.5 bg-slate-50/80 p-1.5 rounded-md border border-slate-100/90 text-[10.5px] text-slate-600 leading-snug">
+                                <i class="fa-solid fa-robot text-brand-500 text-[10px] mt-0.5 shrink-0"></i>
+                                <span class="line-clamp-2" x-text="session.context_summary || session.last_message"></span>
+                            </div>
+
+                            <!-- Footer PNR & Waktu Pesan -->
+                            <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                                <span class="font-bold text-slate-600" x-text="'PNR: ' + session.pnr_code"></span>
+                                <span class="font-sans text-[9.5px] text-slate-400" x-text="session.last_message_time || session.departure_time"></span>
+                            </div>
+                        </button>
+                    </template>
+                </div>
             </div>
+        </template>
 
-            <div class="space-y-1">
-                {{-- #BACKEND Ticket 1 — Data statis GA826
-                     id: Nomor penerbangan, rute, PNR, tanggal, status delay harus dari DB: bookings.flight_number, bookings.pnr, flights.status
-                     en: Flight number, route, PNR, date, delay status must be from DB: bookings.flight_number, bookings.pnr, flights.status --}}
-                <!-- Ticket 1 (Current Active) -->
-                <button @click="selectTicket('GA826')"
-                        :class="selectedTicketId === 'GA826' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold flex items-center gap-1.5 text-slate-900 text-xs">
-                            <i class="fa-solid fa-plane-departure text-brand-600 text-[10px]"></i>
-                            <span>GA826 • CGK</span>
-                            <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
-                            <span>SIN</span>
-                        </span>
-                        <span class="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200"
-                              x-text="lang === 'id' ? '+4j 25m' : '+4h 25m'">
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-500">
-                        <span class="font-mono">PNR: GA-9821A</span>
-                        <span x-text="lang === 'id' ? '30 Nov 2026' : 'Nov 30, 2026'"></span>
-                    </div>
-                </button>
+        {{-- id: Tampilan Kosong Jika Belum Ada Sesi Chat / Hasil Pencarian Tidak Ditemukan --}}
+        <template x-if="!filteredChatSessions || filteredChatSessions.length === 0">
+            <div class="py-8 px-3 text-center text-slate-400 space-y-2 select-none">
+                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-sm">
+                    <i class="fa-solid fa-comments"></i>
+                </div>
+                <div class="text-xs font-medium text-slate-600" x-text="ticketSearch ? (lang === 'id' ? 'Hasil tidak ditemukan' : 'No results found') : (lang === 'id' ? 'Belum Ada Riwayat Chat' : 'No Chat History Yet')"></div>
+                <p class="text-[10.5px] text-slate-400 leading-relaxed" x-text="lang === 'id' ? 'Aktivasi tiket PNR Anda untuk memulai sesi obrolan dengan asisten AI.' : 'Activate your PNR ticket to start a chat session with the AI assistant.'"></p>
             </div>
-        </div>
-
-        {{-- id: Kategori 2: Tiket Bulan Ini
-             en: Category 2: This Month's Upcoming Tickets --}}
-        <!-- Category 2: Bulan Ini (This Month) -->
-        <div>
-            <div class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400"
-                 x-text="lang === 'id' ? 'Bulan Ini' : 'This Month'"></div>
-
-            <div class="space-y-1">
-                {{-- #BACKEND Ticket 2 — Data statis SQ951
-                     id: Semua data tiket ini statis — harus dari tabel bookings di database
-                     en: All ticket data is static — must be from bookings table in database --}}
-                <!-- Ticket 2: SQ951 (From Boarding Pass Photo) -->
-                <button @click="selectTicket('SQ951')"
-                        :class="selectedTicketId === 'SQ951' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium flex items-center gap-1.5 text-slate-800 text-xs">
-                            <i class="fa-solid fa-plane text-brand-600 text-[10px]"></i>
-                            <span>SQ951 • CGK</span>
-                            <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
-                            <span>SIN</span>
-                        </span>
-                        <span class="text-[9.5px] font-medium px-1.5 py-0.2 rounded bg-blue-50 text-brand-700 border border-blue-200">
-                            Business
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-500">
-                        <span class="font-mono">PNR: SQ-951A</span>
-                        <span x-text="lang === 'id' ? '15 Okt 2026' : 'Oct 15, 2026'"></span>
-                    </div>
-                </button>
-
-                {{-- #BACKEND Ticket 3 — Data statis SQ638 --}}
-                <!-- Ticket 3: SQ638 -->
-                <button @click="selectTicket('SQ638')"
-                        :class="selectedTicketId === 'SQ638' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs group cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium flex items-center gap-1.5 text-slate-800 text-xs">
-                            <i class="fa-solid fa-plane text-slate-400 text-[10px]"></i>
-                            <span>SQ638 • SIN</span>
-                            <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
-                            <span>HND</span>
-                        </span>
-                        <span class="text-[9.5px] font-medium px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              x-text="lang === 'id' ? 'Tepat Waktu' : 'On Time'">
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-500">
-                        <span class="font-mono">PNR: SQ-4109B</span>
-                        <span x-text="lang === 'id' ? '05 Des 2026' : 'Dec 05, 2026'"></span>
-                    </div>
-                </button>
-            </div>
-        </div>
-
-        {{-- #BACKEND Riwayat Sebelumnya
-             id: Trip sebelumnya harus dari DB: bookings WHERE status = 'completed' ORDER BY departure_date DESC
-             en: Past trips must be from DB: bookings WHERE status = 'completed' ORDER BY departure_date DESC --}}
-        <!-- Category 3: Riwayat Sebelumnya (Past Trips) -->
-        <div>
-            <div class="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400"
-                 x-text="lang === 'id' ? 'Riwayat Sebelumnya' : 'Previous Trips'"></div>
-
-            <div class="space-y-1">
-                <!-- Ticket 3 -->
-                <button @click="selectTicket('QZ502')"
-                        :class="selectedTicketId === 'QZ502' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/70 opacity-85 hover:opacity-100'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium flex items-center gap-1.5 text-slate-700 text-xs">
-                            <i class="fa-solid fa-check text-slate-400 text-[10px]"></i>
-                            <span>QZ502 • DPS</span>
-                            <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
-                            <span>SIN</span>
-                        </span>
-                        <span class="text-[9.5px] text-slate-400" x-text="lang === 'id' ? 'Selesai' : 'Completed'"></span>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-400">
-                        <span class="font-mono">PNR: QZ-1102K</span>
-                        <span x-text="lang === 'id' ? '14 Okt 2026' : 'Oct 14, 2026'"></span>
-                    </div>
-                </button>
-
-                <!-- Ticket 4 -->
-                <button @click="selectTicket('JT028')"
-                        :class="selectedTicketId === 'JT028' ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200/70 opacity-85 hover:opacity-100'"
-                        class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1 shadow-2xs cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium flex items-center gap-1.5 text-slate-700 text-xs">
-                            <i class="fa-solid fa-check text-slate-400 text-[10px]"></i>
-                            <span>JT028 • CGK</span>
-                            <i class="fa-solid fa-arrow-right text-[8px] text-slate-400"></i>
-                            <span>SUB</span>
-                        </span>
-                        <span class="text-[9.5px] text-slate-400" x-text="lang === 'id' ? 'Selesai' : 'Completed'"></span>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-400">
-                        <span class="font-mono">PNR: JT-7741R</span>
-                        <span x-text="lang === 'id' ? '22 Sep 2026' : 'Sep 22, 2026'"></span>
-                    </div>
-                </button>
-            </div>
-        </div>
+        </template>
 
     </div>
+
 
     {{-- #BACKEND Bar Profil Pengguna di Bawah Sidebar
          id: Data profil user (nama, inisial, email) diambil dari currentUser yang sudah sinkron dengan Auth::user().

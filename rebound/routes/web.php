@@ -33,6 +33,9 @@ Route::get('/lang/{locale}', function (string $locale) {
     return redirect()->back();
 })->name('locale.switch');
 
+use App\Models\AgentChatSession;
+use App\Models\MockGdsBooking;
+
 // id: Dashboard Utama & Asisten Penerbangan REBOUND (Wajib Login)
 // en: Protected Dashboard & REBOUND Flight Assistant (Authentication Required)
 Route::middleware('auth')->group(function () {
@@ -40,8 +43,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function () {
         $user = auth()->user();
         
-        // Ambil PNR pertama yang berstatus 'active' milik user
+        // id: Utamakan PNR dari sesi chat AI paling terbaru (berdasarkan updated_at)
+        // en: Prioritize PNR from the user's most recent AI chat session (based on updated_at)
+        $latestChatSession = AgentChatSession::where('user_id', $user->id)->latest('updated_at')->first();
+        
+        // Ambil PNR berstatus 'active' milik user sebagai cadangan jika belum ada chat
         $activePnr = $user->pnrs()->where('status', 'active')->first();
+
+        // Kode PNR aktif utama yang akan langsung dibuka saat pertama kali dimuat/login
+        $activePnrCode = $latestChatSession?->pnr_code ?? $activePnr?->pnr_code;
 
         // id: Daftar seluruh PNR asli milik user dari database — dipakai modal aktivasi
         //     untuk menampilkan tiket nyata, menggantikan skenario uji coba statis.
@@ -52,12 +62,44 @@ Route::middleware('auth')->group(function () {
             ->latest()
             ->get(['pnr_code', 'last_name', 'status']);
 
+
+        // id: Sesi chat AI Agent milik pengguna dari database (agent_chat_sessions + chat_messages + mock_gds_bookings)
+        // en: User's AI Agent chat sessions from database (agent_chat_sessions + chat_messages + mock_gds_bookings)
+        $chatSessions = AgentChatSession::where('user_id', $user->id)
+            ->with(['messages' => function ($query) {
+                $query->latest('sent_at');
+            }])
+            ->latest('updated_at')
+            ->get()
+            ->map(function ($session) {
+                $gdsBooking = MockGdsBooking::where('pnr_code', $session->pnr_code)->first();
+                $latestMsg = $session->messages->first();
+
+                return [
+                    'id' => $session->id,
+                    'pnr_code' => $session->pnr_code,
+                    'context_summary' => $session->context_summary,
+                    'last_message' => $latestMsg?->message_content ?? 'Belum ada pesan.',
+                    'last_message_sender' => $latestMsg?->sender ?? 'system',
+                    'last_message_time' => $latestMsg?->sent_at ? $latestMsg->sent_at->format('H:i') : $session->updated_at->format('H:i'),
+                    'flight_number' => $gdsBooking?->flight_number ?? $session->pnr_code,
+                    'from_code' => $gdsBooking?->from_code ?? 'CGK',
+                    'to_code' => $gdsBooking?->to_code ?? 'SIN',
+                    'departure_time' => $gdsBooking?->departure_time?->format('d M Y') ?? '',
+                    'status' => $gdsBooking?->status ?? 'on_time',
+                    'cabin_class' => $gdsBooking?->cabin_class ?? 'Economy',
+                ];
+            });
+
         return view('welcome', [
-            'hasSetupPnr' => $activePnr !== null,
-            'activePnrCode' => $activePnr?->pnr_code,
+            'hasSetupPnr' => $activePnrCode !== null,
+            'activePnrCode' => $activePnrCode,
             'userTickets' => $userTickets,
+            'chatSessions' => $chatSessions,
         ]);
+
     })->name('dashboard');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+

@@ -41,5 +41,10 @@ class DatabaseSeeder extends Seeder
         // id: Isi GDS tiruan dengan booking demo untuk verifikasi PNR
         // en: Populate the mock GDS with demo bookings for PNR verification
         $this->call(MockGdsBookingSeeder::class);
+
+        // id: Isi sesi chat & riwayat pesan AI agent
+        // en: Populate AI agent chat sessions & message history
+        $this->call(AgentChatSeeder::class);
     }
 }
+

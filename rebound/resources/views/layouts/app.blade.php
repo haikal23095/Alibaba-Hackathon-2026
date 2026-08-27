@@ -232,12 +232,34 @@
                 //     shown in the activation modal instead of static test scenarios.
                 userTickets: @json($userTickets ?? []),
 
+                // id: chatSessions — daftar sesi chat AI agent asli milik user dari tabel agent_chat_sessions
+                // en: chatSessions — real user AI agent chat sessions from agent_chat_sessions table
+                chatSessions: @json($chatSessions ?? []),
+
+                // id: filteredChatSessions — getter untuk memfilter riwayat chat berdasarkan pencarian (ticketSearch)
+                // en: filteredChatSessions — getter to filter chat history by search query (ticketSearch)
+                get filteredChatSessions() {
+                    if (!this.ticketSearch || !this.ticketSearch.trim()) {
+                        return this.chatSessions;
+                    }
+                    const q = this.ticketSearch.toLowerCase();
+                    return this.chatSessions.filter(s =>
+                        (s.pnr_code && s.pnr_code.toLowerCase().includes(q)) ||
+                        (s.flight_number && s.flight_number.toLowerCase().includes(q)) ||
+                        (s.from_code && s.from_code.toLowerCase().includes(q)) ||
+                        (s.to_code && s.to_code.toLowerCase().includes(q)) ||
+                        (s.last_message && s.last_message.toLowerCase().includes(q)) ||
+                        (s.context_summary && s.context_summary.toLowerCase().includes(q))
+                    );
+                },
+
                 // id: chatInput — Teks input chat user yang sedang diketik
                 // en: chatInput — User's current chat input text being typed
                 chatInput: '',
                 // id: isTyping — Indikator bahwa AI sedang mengetik respons
                 // en: isTyping — Indicator that AI is currently typing a response
                 isTyping: false,
+
 
                 // #BACKEND Dynamic Context-Aware Prompt Suggestions
                 // id: Saran prompt ini masih statis — harus diambil dari API AI (Qwen/Atlas) berdasarkan konteks penerbangan real-time pengguna
@@ -377,11 +399,12 @@
                     this.$watch('activeSidebarTab', () => this.renderBarcode());
                     this.$watch('currentUser', () => this.renderBarcode());
 
-                    // id: Muat riwayat percakapan dari database agar chat bertahan setelah refresh
-                    // en: Load saved chat history from the database so the conversation survives refresh
-                    if (this.hasSetupPnr) {
-                        this.loadChatHistory();
+                    // id: Muat riwayat percakapan & set tiket aktif dari sesi chat AI terbaru saat pertama kali login/dimuat
+                    // en: Load chat history & set active ticket from the latest AI chat session upon initial login/load
+                    if (this.hasSetupPnr && this.selectedTicketId) {
+                        this.selectTicket(this.selectedTicketId);
                     }
+
                 },
 
                 // id: renderBarcode() — Generate barcode Code128 yang bisa di-scan menggunakan library JsBarcode. Data barcode diambil dari nama penumpang + nomor penerbangan.

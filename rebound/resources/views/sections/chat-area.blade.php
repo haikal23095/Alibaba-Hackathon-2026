@@ -50,31 +50,32 @@
 
                                 {{-- id: Tampilkan Kartu Progress Analisis Gangguan (Figma Node 15:777)
                                      en: Show Disruption Analysis Progress Card (Figma Node 15:777) --}}
-                                <!-- Show Disruption Analysis Progress Card (Figma Node 15:777) -->
-                                <template x-if="msg.showDisruptionProgress">
+                                 <!-- Show Disruption Analysis Progress Card (Figma Node 15:777) -->
+                                <template x-if="msg.showDisruptionProgress || msg.type === 'disruption_alert'">
                                     @include('sections.disruption-progress-card')
                                 </template>
 
                                 {{-- id: Tampilkan Kartu Aturan Kebijakan Tiket (Figma Node 22:1109)
                                      en: Show Verified Ticket Policy Card (Figma Node 22:1109) --}}
                                 <!-- Show In-Chat Verified Ticket Policy Card (Figma Node 22:1109) -->
-                                <template x-if="msg.showTicketPolicy">
+                                <template x-if="msg.showTicketPolicy || msg.type === 'policy_card'">
                                     @include('sections.chat-ticket-policy-card')
                                 </template>
 
                                 {{-- id: Tampilkan Kartu Rekomendasi Penerbangan jika tertunda & belum rebooked (Figma Node 21:894)
                                      en: Show Flight Recommendation Card if delayed & not yet rebooked (Figma Node 21:894) --}}
                                 <!-- Show Recommendation Card if available and not yet rebooked (Figma Node 21:894) -->
-                                <template x-if="msg.showRecommendation && flightStatus === 'delayed'">
+                                <template x-if="(msg.showRecommendation || msg.type === 'options_list') && flightStatus === 'delayed'">
                                     @include('sections.flight-recommendation')
                                 </template>
 
                                 {{-- id: Tampilkan Kartu Sukses Rebooking (Figma Node 25:1210)
                                      en: Show Rebooking Success Card (Figma Node 25:1210) --}}
                                 <!-- Show Success Card if rebooked (Figma Node 25:1210) -->
-                                <template x-if="msg.showSuccess || (msg.showRecommendation && flightStatus === 'rebooked')">
+                                <template x-if="msg.showSuccess || msg.type === 'success_card' || (msg.showRecommendation && flightStatus === 'rebooked')">
                                     @include('sections.success-card')
                                 </template>
+
                             </div>
                             
                             <span class="text-[9.5px] text-slate-400 font-medium mt-1 ml-1 block" x-text="msg.time"></span>

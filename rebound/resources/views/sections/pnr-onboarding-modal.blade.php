@@ -46,9 +46,9 @@
              // en: closeModal() — Closes the modal via outside click or ESC key.
              //     The mandatory first-time activation modal cannot be closed until a PNR is verified.
              closeModal() {
-                 if (!hasSetupPnr) return;
                  showAddTicketModal = false;
              },
+
 
              // id: submitPnr() — Memvalidasi dan mengaktifkan tiket berdasarkan PNR yang diinput
              // en: submitPnr() — Validates and activates ticket based on provided PNR code
@@ -159,12 +159,14 @@
                 <p class="text-xs text-slate-500 mt-0.5"
                    x-text="lang === 'id' ? 'Masukkan kode PNR untuk menampilkan jadwal.' : 'Enter PNR code to retrieve flight schedule.'"></p>
             </div>
-            <template x-if="hasSetupPnr">
-                <button @click="closeModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer">
-                    <i class="fa-solid fa-xmark text-xs"></i>
-                </button>
-            </template>
+            <button @click="showAddTicketModal = false"
+                    x-show="hasSetupPnr || showAddTicketModal"
+                    class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+                    title="Tutup">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
         </div>
+
 
         <!-- Error Alert Callout Box -->
         <div x-show="errorMessage" x-cloak

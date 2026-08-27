@@ -44,6 +44,7 @@
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
 - [Sandbox Environment](#-sandbox-environment)
+- [Quick Start & Setup Guide](#-quick-start--setup-guide)
 
 **Impact & Judging**
 - [Alignment with the UN SDGs](#-alignment-with-the-un-sdgs)
@@ -394,6 +395,33 @@ It already contains **booking records (PNRs) seeded as the initial state**. When
 - Comparing the before → after state (e.g. Nov 30 → Nov 26) serves as end-to-end functional validation.
 
 > ℹ️ The disruption (delay) signal is also **simulated**, via a single trigger ("Trigger Storm") during the demo. All the logic behind it remains fully functional and representative of production conditions.
+
+---
+
+## 🚀 Quick Start & Setup Guide
+
+To run the **Rebound** web application and API gateway locally:
+
+```bash
+# 1. Navigate to the application folder
+cd rebound
+
+# 2. Install dependencies
+composer install
+npm install
+
+# 3. Setup environment and database
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite  # SQLite default setup
+php artisan migrate:fresh --seed
+
+# 4. Build assets & start dev server
+npm run build
+php artisan serve
+```
+
+For full API endpoint documentation, database schema details, and demo seed data, see the detailed [Rebound App Documentation](file:///home/haikal/Documents/Alibaba-Hackathon-2026/rebound/README.md).
 
 ---
 
