@@ -369,4 +369,36 @@ PROMPT;
             'showRecommendation' => false,
         ];
     }
+
+    /**
+     * id: Menghapus sesi chat beserta seluruh riwayat pesan (chat_messages) dari database untuk menghemat ruang penyimpanan.
+     * en: Deletes a chat session along with all its message history (chat_messages) from the database to save storage space.
+     */
+    public function deleteSession(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $session = AgentChatSession::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$session) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sesi chat tidak ditemukan atau Anda tidak memiliki akses.'
+            ], 404);
+        }
+
+        $pnrCode = $session->pnr_code;
+
+        // Hapus sesi (pesan di chat_messages otomatis terhapus via CASCADE)
+        $session->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Sesi chat PNR ' . $pnrCode . ' berhasil dihapus.',
+            'pnr_code' => $pnrCode,
+            'session_id' => (int) $id,
+        ], 200);
+    }
 }

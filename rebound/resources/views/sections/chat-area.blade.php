@@ -27,11 +27,23 @@
         <!-- Active Trip Card at the top of workspace -->
         @include('sections.active-trip-card')
 
+        <!-- Empty Chat Messages Placeholder -->
+        <template x-if="!messages || messages.length === 0">
+            <div class="py-6 px-4 text-center space-y-2 bg-white/80 backdrop-blur-xs border border-slate-200/90 rounded-xl my-4 select-none max-w-sm mx-auto shadow-2xs">
+                <div class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto text-base">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <div class="text-xs font-bold text-slate-800" x-text="lang === 'id' ? 'Sesi Obrolan Baru' : 'Fresh Chat Session'"></div>
+                <p class="text-[11px] text-slate-500 leading-relaxed" x-text="lang === 'id' ? 'Riwayat chat sebelumnya telah dibersihkan. Silakan ketik pesan atau pilih saran prompt di bawah untuk memulai analisis percakapan baru.' : 'Previous chat history cleared. Type a message or pick a suggestion chip below to start a new chat.'"></p>
+            </div>
+        </template>
+
         {{-- #BACKEND Loop Riwayat Pesan Dinamis
              id: Di-loop dari state `messages`. Di produksi: data di-stream via SSE/WebSocket atau REST API dari database.
              en: Looped from `messages` state. In production: streamed via SSE/WebSocket or REST API from database. --}}
         <!-- Dynamic Message History -->
         <template x-for="(msg, index) in messages" :key="index">
+
             <div class="w-full">
                 {{-- id: Baris Pesan dari Asisten AI
                      en: AI Assistant Message Row --}}

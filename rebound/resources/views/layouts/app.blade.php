@@ -787,6 +787,46 @@
                     }
                 },
 
+                // id: deleteChatSession(sessionId, pnrCode) — Menghapus sesi percakapan dari database & UI
+                // en: deleteChatSession(sessionId, pnrCode) — Deletes a chat session from database & UI
+                async deleteChatSession(sessionId, pnrCode) {
+                    if (!confirm(this.lang === 'id' ? `Apakah Anda yakin ingin menghapus riwayat chat untuk tiket PNR ${pnrCode}?` : `Are you sure you want to delete chat history for PNR ${pnrCode}?`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/chat/session/' + sessionId, {
+                            method: 'DELETE',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            }
+                        });
+
+                        if (response.ok) {
+                            // Hapus dari array chatSessions lokal
+                            this.chatSessions = this.chatSessions.filter(s => s.id !== sessionId);
+
+                            this.showToast(this.lang === 'id' ? `Sesi chat PNR ${pnrCode} berhasil dihapus!` : `Chat session PNR ${pnrCode} deleted!`);
+
+                            // Jika sesi yang dihapus adalah yang sedang dibuka, pindah ke sesi lain atau bersihkan chat
+                            if (this.selectedTicketId === pnrCode) {
+                                if (this.chatSessions.length > 0) {
+                                    this.selectTicket(this.chatSessions[0].pnr_code);
+                                } else {
+                                    this.messages = [];
+                                }
+                            }
+                        } else {
+                            this.showToast(this.lang === 'id' ? 'Gagal menghapus sesi chat.' : 'Failed to delete chat session.');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting chat session:', error);
+                        this.showToast(this.lang === 'id' ? 'Terjadi kesalahan sistem.' : 'A system error occurred.');
+                    }
+                },
+
+
                 async sendMessage(customText = null) {
                     const text = customText || this.chatInput;
                     if (!text || text.trim() === '') return;

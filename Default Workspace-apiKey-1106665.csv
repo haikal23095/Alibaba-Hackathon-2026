@@ -1,0 +1,8 @@
+﻿id,1106665
+apiKey,sk-ws-H.DDMEEER.BijA.MEUCIH56LBQi7_r5f4g-L-38lYx9rYItlHl9bDc4UeVRpc7dAiEA9Ekgbxy1bo--Y1HXzWhfzrwr8ep8s4CNAaHFqVMHhjw
+apiHost,llm-3hndfadkug5d95i8.ap-southeast-1.maas.aliyuncs.com
+openAiCompatible,https://llm-3hndfadkug5d95i8.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
+dashScope,https://llm-3hndfadkug5d95i8.ap-southeast-1.maas.aliyuncs.com/api/v1
+description,main
+workspaceName,Default Workspace
+workspaceId,llm-3hndfadkug5d95i8

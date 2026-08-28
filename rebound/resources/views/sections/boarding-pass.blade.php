@@ -34,8 +34,8 @@
         <div class="flex items-center justify-between pb-1 border-b border-slate-100">
             <div>
                 <span class="text-[7.5px] text-slate-400 font-bold uppercase block" x-text="lang === 'id' ? 'DARI' : 'FROM'"></span>
-                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.fromCode"></span>
-                <span class="text-[8px] text-slate-500 block font-medium">Jakarta (CGK)</span>
+                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.fromCode || 'CGK'"></span>
+                <span class="text-[8px] text-slate-500 block font-medium" x-text="(flight.original.fromCity || 'Jakarta') + ' (' + (flight.original.fromCode || 'CGK') + ')'"></span>
             </div>
 
             <!-- Plane Route Icon -->
@@ -46,13 +46,13 @@
                     <i class="fa-solid fa-plane text-brand-600 text-[8px]"></i>
                     <div class="w-4 h-0.5 bg-slate-200"></div>
                 </div>
-                <span class="text-[7.5px] text-slate-400 font-mono">1h 45m</span>
+                <span class="text-[7.5px] text-slate-400 font-mono" x-text="flight.original.duration || '1h 45m'"></span>
             </div>
 
             <div class="text-right">
                 <span class="text-[7.5px] text-slate-400 font-bold uppercase block" x-text="lang === 'id' ? 'KE' : 'TO'"></span>
-                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.toCode"></span>
-                <span class="text-[8px] text-slate-500 block font-medium" x-text="lang === 'id' ? 'Singapura (SIN)' : 'Singapore (SIN)'"></span>
+                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.toCode || 'SIN'"></span>
+                <span class="text-[8px] text-slate-500 block font-medium" x-text="(lang === 'id' ? (flight.original.toCity || 'Singapura') : (flight.original.toCityEn || flight.original.toCity || 'Singapore')) + ' (' + (flight.original.toCode || 'SIN') + ')'"></span>
             </div>
         </div>
 
@@ -63,22 +63,22 @@
             <!-- Gate -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'GATE' : 'GATE'"></span>
-                <span class="text-[10px] font-black text-brand-600" x-text="flightStatus === 'rebooked' ? '4A' : '3B'"></span>
+                <span class="text-[10px] font-black text-brand-600" x-text="flightStatus === 'rebooked' ? '4A' : (flight.original.gate || '3B')"></span>
             </div>
             <!-- Boarding Time -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'BOARDING' : 'BOARDING'"></span>
-                <span class="text-[9.5px] font-bold text-slate-900" x-text="flightStatus === 'rebooked' ? '12:00' : '08:50'"></span>
+                <span class="text-[9.5px] font-bold text-slate-900" x-text="flightStatus === 'rebooked' ? '12:00' : (flight.original.depTime || '08:50')"></span>
             </div>
             <!-- Seat -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'KURSI' : 'SEAT'"></span>
-                <span class="text-[9.5px] font-black text-slate-900">14A</span>
+                <span class="text-[9.5px] font-black text-slate-900" x-text="flight.original.seat || '14A'"></span>
             </div>
             <!-- Zone -->
             <div>
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block">ZONE</span>
-                <span class="text-[9.5px] font-bold text-slate-900">2</span>
+                <span class="text-[9.5px] font-bold text-slate-900" x-text="flight.original.boardingGroup || '2'"></span>
             </div>
         </div>
 
@@ -88,10 +88,11 @@
         <div class="flex items-center justify-between px-1.5 py-0.5 bg-emerald-50/80 border border-emerald-200/60 rounded text-[8.5px]">
             <div class="flex items-center gap-1 text-emerald-800 font-semibold truncate">
                 <i class="fa-solid fa-suitcase-rolling text-emerald-600 text-[8.5px]"></i>
-                <span>Bag Tag #GA-489102</span>
+                <span x-text="'Bag Tag #' + (flight.original.bagTag || ('GA-' + selectedTicketId))"></span>
             </div>
             <span class="text-emerald-700 font-bold text-[7.5px] uppercase shrink-0" x-text="lang === 'id' ? 'Auto-Teralihkan' : 'Auto-Transferred'"></span>
         </div>
+
     </div>
 
     {{-- id: Garis Sobekan Tiket Fisik (Perforated Tear-off Effect)
@@ -119,7 +120,7 @@
             </div>
             <div class="text-right">
                 <span class="text-[7.5px] text-slate-400 font-bold uppercase block">PNR / ETKT</span>
-                <span class="font-mono font-bold text-slate-900">GA-9821A</span>
+                <span class="font-mono font-bold text-slate-900" x-text="selectedTicketId"></span>
             </div>
         </div>
 
@@ -143,11 +144,12 @@
 
             <!-- REAL SCANNABLE QR CODE (Clickable to Enlarge & Airport Scanner Ready) -->
             <div class="relative group cursor-pointer" @click="showQrModal = true" title="Scan QR / Klik untuk perbesar">
-                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' + encodeURIComponent('REBOUND PASS: PNR GA-9821A | PAX ' + currentUser.passenger + ' | FLIGHT ' + (flightStatus === 'rebooked' ? 'GA830' : 'GA826') + ' CGK->SIN | GATE: ' + (flightStatus === 'rebooked' ? '4A' : '3B') + ' | SEAT 14A | STATUS: CONFIRMED')"
+                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' + encodeURIComponent('REBOUND PASS: PNR ' + selectedTicketId + ' | PAX ' + currentUser.passenger + ' | FLIGHT ' + (flightStatus === 'rebooked' ? 'GA830' : (flight.original.flightNumber || selectedTicketId)) + ' ' + (flight.original.fromCode || 'CGK') + '->' + (flight.original.toCode || 'SIN') + ' | GATE: ' + (flightStatus === 'rebooked' ? '4A' : '3B') + ' | SEAT 14A | STATUS: CONFIRMED')"
                      alt="Scannable QR Code"
                      class="w-6.5 h-6.5 p-0.5 bg-white rounded border border-slate-300 shadow-2xs hover:scale-110 transition duration-150 object-contain">
             </div>
         </div>
+
 
         {{-- #BACKEND Aksi Unduh PDF & Simpan ke Mobile Wallet
              id: downloadPdf() memicu cetak/unduh PDF. showWalletModal memunculkan modal Apple/Google Wallet.

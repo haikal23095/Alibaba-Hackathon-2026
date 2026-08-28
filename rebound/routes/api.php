@@ -35,6 +35,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // id: Riwayat percakapan tersimpan untuk PNR aktif (agar chat bertahan setelah refresh)
     // en: Stored conversation history for the active PNR (so chat survives refresh)
     Route::get('/chat/history', [ChatController::class, 'history']);
+    // id: Hapus sesi percakapan AI & riwayat pesan untuk menghemat memori
+    // en: Delete AI chat session & message history to save storage space
+    Route::delete('/chat/session/{id}', [ChatController::class, 'deleteSession']);
+
 
     // ---------------------------------------------------------
     // DEMO ENDPOINTS (Gunakan ini sementara UI diuji)

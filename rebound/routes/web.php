@@ -100,6 +100,8 @@ Route::middleware('auth')->group(function () {
 
     })->name('dashboard');
 
+    Route::delete('/api/chat/session/{id}', [\App\Http\Controllers\ChatController::class, 'deleteSession']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+
 

@@ -1,0 +1,1 @@
+curl -fsSL 'https://bailian.aliyun.com/api-key.sh' | bash -s -- 'o1_J.OEmiU9zlrLMUPYZ2_00c_FuEU1t.jK4CUyhAkeR53ERqeS8_-cVMqXS-6M.u.N7pMsMJQhp_s-dF0wWcl6jSCEe9rwQAzlWupMycaJKaE4jC4RYt0pemaF_-BXdr.s' -r ap-southeast-1 -w llm-3hndfadkug5d95i8

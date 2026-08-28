@@ -50,9 +50,9 @@
 
                 <div class="space-y-1.5">
                     <template x-for="session in filteredChatSessions" :key="session.id">
-                        <button @click="selectTicket(session.pnr_code)"
-                                :class="selectedTicketId === session.pnr_code ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
-                                class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1.5 shadow-2xs group cursor-pointer relative overflow-hidden">
+                        <div @click="selectTicket(session.pnr_code)"
+                             :class="selectedTicketId === session.pnr_code ? 'bg-blue-50 text-brand-950 border-brand-300 ring-1 ring-brand-500/20 font-semibold shadow-xs' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/80'"
+                             class="w-full text-left p-2.5 rounded-lg border transition flex flex-col gap-1.5 shadow-2xs group cursor-pointer relative overflow-hidden">
                             
                             <!-- Header Penerbangan & Rute -->
                             <div class="flex items-center justify-between">
@@ -91,14 +91,24 @@
                                 <span class="line-clamp-2" x-text="session.context_summary || session.last_message"></span>
                             </div>
 
-                            <!-- Footer PNR & Waktu Pesan -->
+                            <!-- Footer PNR, Waktu Pesan & Tombol Hapus Sesi -->
                             <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
                                 <span class="font-bold text-slate-600" x-text="'PNR: ' + session.pnr_code"></span>
-                                <span class="font-sans text-[9.5px] text-slate-400" x-text="session.last_message_time || session.departure_time"></span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-sans text-[9.5px] text-slate-400" x-text="session.last_message_time || session.departure_time"></span>
+                                    <button type="button"
+                                            @click.stop="deleteChatSession(session.id, session.pnr_code)"
+                                            class="w-6 h-6 rounded-md hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition cursor-pointer"
+                                            :title="lang === 'id' ? 'Hapus Riwayat Chat Sesi Ini' : 'Delete Chat History Session'">
+                                        <i class="fa-regular fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </button>
+
+                        </div>
                     </template>
                 </div>
+
             </div>
         </template>
 
