@@ -38,11 +38,18 @@
 - [Sample Atlas API Response](#sample-atlas-api-response)
 - [Authorization Model](#-authorization-model)
 - [Agent Tools](#-agent-tools)
+- [Known Design Gap — Multi-Segment Itineraries](#️-known-design-gap--multi-segment-itineraries)
 - [User Flows](#-user-flows)
 
 **Technical**
 - [Architecture](#-architecture)
+  - [System Overview (As Built)](#system-overview-as-built)
+  - [Agent Request Flow](#agent-request-flow-post-apichatsend)
+  - [Design Decisions Worth Noting](#design-decisions-worth-noting)
+  - [Implementation Status](#implementation-status)
+- [Data Model](#-data-model)
 - [Tech Stack](#-tech-stack)
+- [Target Architecture (Post-Hackathon)](#-target-architecture-post-hackathon)
 - [Sandbox Environment](#-sandbox-environment)
 - [Quick Start & Setup Guide](#-quick-start--setup-guide)
 
@@ -241,6 +248,19 @@ Rebound implements a *consent-first* **Trust & Authorization Layer**:
 | `hold_seat(flight_id)` | Temporarily locks a seat | Flows 1 & 2 |
 | `reissue_ticket(pnr, new_flight)` | Reissues and updates the ticket | Flows 1 & 2 |
 
+### ⚠️ Known Design Gap — Multi-Segment Itineraries
+
+**🟢 For Everyone:** Long-haul trips are rarely direct. A flight to Istanbul might go Jakarta → Dubai → Istanbul. If the first leg is delayed, the passenger misses the connection — and fixing *one* flight is not enough, because the rest of the journey falls apart with it.
+
+**🔵 For Technical Readers:** Two of our tools currently assume a single-leg trip:
+
+- `search_alternatives(from, to, date, cabin_class)` treats the journey as one origin–destination pair.
+- `reissue_ticket(pnr, new_flight)` accepts a single replacement flight, so it cannot express a re-planned multi-leg itinerary.
+
+The Atlas API does return connecting itineraries, so the data supports this — our tool signatures do not yet. Handling it properly means re-planning the whole chain (including alternative connection points) and reissuing every affected segment as one atomic operation, while still validating fare rules for each.
+
+We are documenting this openly rather than hiding it: it is the most significant limitation in the current design, and the clearest next step after the core tools are live.
+
 ---
 
 ## 🔄 User Flows
@@ -327,15 +347,244 @@ Rebound has two main flows. Both are made as simple as possible.
 
 ## 🏗 Architecture
 
-**🟢 For Everyone:** Rebound's system is split into 4 "layers" that work together — from the interface you see, to the AI brain, to the bridge to the data, to the flight data source itself.
+**🟢 For Everyone:** Rebound's system is split into layers that work together — from the interface you see, to the AI brain, to the bridge to the data, to the flight data source itself.
 
-**🔵 For Technical Readers:** Four layers that map directly onto the hackathon's required technologies:
+This section describes **what is actually built and running in this repository today**. Where a piece is still simulated or not yet wired up, we say so explicitly rather than describing the finished vision as if it already existed. The intended production shape is documented separately in [Target Architecture](#-target-architecture-post-hackathon).
+
+**🔵 For Technical Readers:** Rebound is currently a **single Laravel 13 monolith** (`rebound/`) that serves both the web UI and the JSON API. There is no separate agent service and no serverless deployment yet — the agent loop, the API gateway, and the GDS stand-in all run inside the same PHP application.
+
+### System Overview (As Built)
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  1. PRESENTATION LAYER — Blade + Alpine.js (server-rendered)          │
+│     resources/views/**                                                │
+│     • layouts/app.blade.php   — shell, Tailwind CDN, Alpine, JsBarcode│
+│     • welcome.blade.php       — single-screen dashboard               │
+│     • sections/*.blade.php    — the dynamic chat components:          │
+│         chat-area · flight-recommendation · ticket-policy ·           │
+│         boarding-pass · qr-modal · pnr-onboarding-modal · …           │
+│     • auth/login · auth/register — Firebase JS SDK obtains an ID token│
+│                                                                       │
+│     State lives in Alpine; components are toggled by flags the        │
+│     backend returns (showTicketPolicy / showRecommendation).          │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │  fetch() → JSON  (Sanctum / session auth)
+┌───────────────────────────▼──────────────────────────────────────────┐
+│  2. HTTP LAYER — routes/web.php + routes/api.php                      │
+│     web.php  → guest routes, /auth/firebase, /lang/{locale},          │
+│                the auth-protected dashboard, /logout                  │
+│     api.php  → auth:sanctum group:                                    │
+│                POST /api/pnr/lookup      POST /api/pnr/verify         │
+│                POST /api/pnr/activate    POST /api/chat/send          │
+│                GET  /api/chat/history    GET  /api/flights/alternatives│
+│                POST /api/flights/rebook                               │
+│                GET  /api/health (public)                              │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────────────┐
+│  3. APPLICATION LAYER — app/Http/Controllers                          │
+│                                                                       │
+│   AuthController    Firebase ID token → verifyIdToken() (Admin SDK)   │
+│                     → User::firstOrCreate(firebase_uid)               │
+│                     → web: Laravel session │ api: Sanctum token       │
+│                                                                       │
+│   FlightController  PNR ownership & authorization                     │
+│                     lookup() / verify()  → check Mock GDS, match      │
+│                                             passenger surname         │
+│                     activate()           → persist active PNR         │
+│                     Invariant: one 'active' PNR per user; the         │
+│                     previous one is demoted to 'changed'.             │
+│                                                                       │
+│   ChatController    The agent turn (see Agent Request Flow below)     │
+│                     sendMessage() · history()                         │
+│                     getSystemPrompt() — strict JSON-only contract     │
+│                     callQwenLLM()    — HTTP → Qwen, else fallback     │
+│                     simulateAgenticAI() — keyword reasoning engine    │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │  Eloquent
+┌───────────────────────────▼──────────────────────────────────────────┐
+│  4. DATA LAYER — MySQL (rebound_db)                                   │
+│     users · user_pnrs · agent_chat_sessions · chat_messages ·         │
+│     agent_action_logs · compensation_vouchers · mock_gds_bookings     │
+│     personal_access_tokens (Sanctum)                                  │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │
+┌───────────────────────────▼──────────────────────────────────────────┐
+│  5. EXTERNAL SERVICES                                                 │
+│     ✅ Firebase Auth (kreait/laravel-firebase) — live, verifies tokens│
+│     🟡 Qwen / DashScope — code path complete, activates when an       │
+│        API key is present; otherwise the simulation engine answers    │
+│     🟡 Mock GDS — the mock_gds_bookings table stands in for the       │
+│        Atlas API / real GDS; swapping it out is the next milestone    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Agent Request Flow (`POST /api/chat/send`)
+
+This is the core path of the whole product — what happens between the user pressing Enter and a card appearing in the chat. Implemented in [`ChatController::sendMessage()`](rebound/app/Http/Controllers/ChatController.php).
+
+```
+ 1. Validate                 message + pnr are required
+ 2. Authorize the PNR        UserPnr::where(user_id, pnr_code) — a user may only
+                             ever talk about a PNR bound to their own account.
+                             Not theirs → 403, no LLM call is made.
+ 3. Resolve the session      AgentChatSession::firstOrCreate(user_id, pnr_code)
+ 4. Persist the user turn    ChatMessage(sender: 'user')
+ 5. Build flight_context     from mock_gds_bookings: flight number, route,
+                             departure, cabin class, status, waiver eligibility
+ 6. Build chat_history       the last 6 messages, oldest-first → LLM memory
+ 7. Reason                   callQwenLLM(message, flight_context, chat_history)
+                               ├─ API key set → POST to Qwen (temp 0.3,
+                               │                response_format: json_object)
+                               │                → parseStrictJson() strips any
+                               │                  ``` fences and validates
+                               └─ no key / error / unparseable
+                                                → simulateAgenticAI() fallback
+ 8. Persist the agent turn   ChatMessage(sender: 'agent') + dynamic_ui_payload
+ 9. Respond                  the JSON contract below → Alpine renders the card
+```
+
+**The UI contract.** Every agent turn — whether it came from the real LLM or the fallback — returns the same shape, which is what lets the frontend render a card instead of a wall of text:
+
+```json
+{
+  "type": "text | policy_card | options_list | disruption_alert | success_card",
+  "replyId": "Indonesian response",
+  "replyEn": "English response",
+  "showTicketPolicy": false,
+  "showRecommendation": false
+}
+```
+
+`type` selects the component; the two booleans toggle the policy and recommendation panels. Because the same contract is enforced on both paths, **the demo works identically with or without an LLM key** — the fallback degrades the reasoning, never the interface.
+
+### Design Decisions Worth Noting
+
+| Decision | Rationale |
+| :--- | :--- |
+| **Graceful LLM degradation** | `callQwenLLM()` falls back to `simulateAgenticAI()` on a missing key, an HTTP error, a timeout, or unparseable output. A live demo can never hard-fail on a network hiccup. |
+| **Bilingual at the data layer** | Both `replyId` and `replyEn` are generated in one pass and stored together, so the ID/EN switch is instant and never re-queries the model. |
+| **PNR ownership as a guardrail** | Authorization is checked in step 2, *before* any model call. The agent structurally cannot reason about a booking the user doesn't own. |
+| **Strict JSON, defensively parsed** | The system prompt forbids Markdown, and `parseStrictJson()` still strips ``` fences and validates — prompt instructions are treated as a request, not a guarantee. |
+| **Mock GDS behind a real seam** | `MockGdsBooking` is queried only inside `FlightController` and `ChatController`; replacing it with the Atlas API is a localized change, not a rewrite. |
+| **Server-rendered, CDN assets** | Blade + Alpine over a CDN keeps the whole app one `php artisan serve` away — no build step is required to run the demo. |
+
+### Implementation Status
+
+**🟢 For Everyone:** An honest scoreboard of which parts are genuinely working versus still simulated.
+
+| Component | Status | Notes |
+| :--- | :---: | :--- |
+| Auth (Google + email/password) | ✅ Live | Firebase Admin SDK verifies every ID token server-side |
+| Database schema & migrations | ✅ Live | All 7 domain tables migrated and seeded |
+| Chat UI + dynamic components | ✅ Live | Cards, QR, boarding pass with scannable Code128 barcodes |
+| PNR verification & ownership | ✅ Live | Against the Mock GDS, with surname matching |
+| Conversation persistence | ✅ Live | Survives refresh via `GET /api/chat/history` |
+| Qwen LLM integration | 🟡 Ready | Code path complete; **activates once `QWEN_API_KEY` is set** — see [LLM Configuration](#llm-configuration) |
+| Agentic reasoning | 🟡 Simulated | Keyword-driven `simulateAgenticAI()`; a true ReAct tool loop is the next milestone |
+| Atlas Travel API | 🟡 Mocked | `mock_gds_bookings` + static demo endpoints stand in for live GDS calls |
+| Formal tool registry | ⬜ Planned | The six tools are specified but not yet registered as callable JSON schemas |
+| `agent_action_logs` writes | ⬜ Planned | Table exists; population lands with the tool loop |
+| Alibaba Function Compute | ⬜ Planned | Currently all logic runs inside the Laravel monolith |
+
+#### LLM Configuration
+
+The Qwen client reads its settings from `config('services.qwen.*')`, falling back to environment variables. To activate the real LLM, add to `.env`:
+
+```env
+QWEN_API_KEY=your_dashscope_api_key
+QWEN_API_ENDPOINT=https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions
+QWEN_MODEL_NAME=qwen-max
+```
+
+> ⚠️ **Note:** `config/services.php` does not yet define a `qwen` block, so the `config()` lookup currently resolves to `null` and the code falls through to `env()`. Because `php artisan config:cache` disables `env()` at runtime, add the block below to `config/services.php` before deploying with a cached config:
+>
+> ```php
+> 'qwen' => [
+>     'api_key'  => env('QWEN_API_KEY'),
+>     'endpoint' => env('QWEN_API_ENDPOINT'),
+>     'model'    => env('QWEN_MODEL_NAME', 'qwen-max'),
+> ],
+> ```
+
+---
+
+## 🗄 Data Model
+
+**🟢 For Everyone:** How the information is organized — who the user is, which tickets are theirs, what was said in the chat, and what the AI did.
+
+**🔵 For Technical Readers:** Seven domain tables. `pnr_code` is the string that ties a conversation to a booking.
+
+```
+users ──1:N──> user_pnrs             a user's verified, owned bookings
+  │                                  unique(user_id, pnr_code)
+  │                                  status: active | changed | cancelled | flown
+  │
+  ├──1:N──> agent_chat_sessions ──1:N──> chat_messages
+  │            (user_id, pnr_code,          (session_id, sender, message_content,
+  │             context_summary)              dynamic_ui_payload JSON, sent_at)
+  │                    │                     sender: user | agent | system
+  │                    │
+  │                    └──1:N──> agent_action_logs
+  │                                (tool_name, tool_arguments JSON,
+  │                                 policy_rationale JSON, status)
+  │                                 ← the audit trail for every agent action
+  │
+  └──1:N──> compensation_vouchers
+               (pnr_code, qr_code_string UNIQUE, voucher_type, is_redeemed)
+
+mock_gds_bookings   standalone — the airline's side of the world
+  (pnr_code, last_name, flight_number, from_code, to_code,
+   departure_time, cabin_class, status)
+```
+
+Two details worth calling out:
+
+- **`chat_messages.dynamic_ui_payload`** is the JSON column that makes the chat replayable. It stores the card type and panel flags alongside the text, so `GET /api/chat/history` can reconstruct the rendered conversation — cards included — rather than replaying it as flat text.
+- **`agent_action_logs.policy_rationale`** exists to satisfy the *auditable agent* requirement: every tool call is meant to record not just what the agent did, but the fare-rule reasoning that justified it. The table is migrated; writes land with the tool loop.
+
+---
+
+## 🧪 Tech Stack
+
+**Currently in the repository:**
+
+| Category | Technology |
+| :--- | :--- |
+| **Framework** | Laravel 13 (PHP 8.3+; developed on 8.4) |
+| **Frontend** | Blade server-rendering + Alpine.js 3 (CDN) |
+| **Styling** | Tailwind CSS (Play CDN at runtime; Tailwind 4 + Vite available for builds) |
+| **Auth** | Firebase Authentication via `kreait/laravel-firebase` 7 |
+| **API auth** | Laravel Sanctum 4 (token) + session guard (web) |
+| **Database** | MySQL (`rebound_db`) |
+| **LLM client** | Qwen / DashScope OpenAI-compatible endpoint (`Http::post`) |
+| **Build tooling** | Vite 8 + `laravel-vite-plugin` |
+| **Extras** | JsBarcode (IATA Code128 boarding passes), bilingual ID/EN via `lang/` |
+
+**Target platform (hackathon submission):**
+
+| Category | Technology |
+| :--- | :--- |
+| **Agent Platform** | Qoder |
+| **LLM** | Qwen (Alibaba Cloud Model Studio) |
+| **Compute** | Alibaba Cloud Function Compute |
+| **Database** | Alibaba Cloud RDS / Redis |
+| **Travel API** | Atlas Travel API |
+
+---
+
+## 🎯 Target Architecture (Post-Hackathon)
+
+**🟢 For Everyone:** This is where the system is heading — the same product, but with each layer running as its own cloud service instead of one application.
+
+**🔵 For Technical Readers:** The as-built monolith maps cleanly onto the four-layer target. The seams already exist; the work is extraction, not redesign.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. PRESENTATION LAYER (Interface)                           │
-│     Chat UI + dynamic component renderer (flight cards,      │
-│     QR, boarding pass) + notification receiver               │
+│  1. PRESENTATION LAYER                                       │
+│     Chat UI + dynamic component renderer + push notifications│
+│     ← today: Blade + Alpine (already in place)               │
 └───────────────────────────┬─────────────────────────────────┘
                             │  responses + rendering
 ┌───────────────────────────▼─────────────────────────────────┐
@@ -344,18 +593,21 @@ Rebound has two main flows. Both are made as simple as possible.
 │     • Orchestrator (ReAct reasoning loop)                    │
 │     • Tool Registry (the agent's capability list)            │
 │     • Policy-Aware Guardrail (fare rules must be validated)  │
+│     ← today: ChatController — single-turn, no tool loop yet  │
 └───────────────────────────┬─────────────────────────────────┘
                             │  tool calls
 ┌───────────────────────────▼─────────────────────────────────┐
 │  3. INTEGRATION LAYER (Bridge)                               │
 │     Alibaba Cloud Function Compute                           │
 │     Tool wrappers → Atlas API + disruption signal receiver   │
+│     ← today: FlightController + static demo endpoints        │
 └───────────────────────────┬─────────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
-│  4. DATA & EXTERNAL SERVICES (Data Sources)                  │
+│  4. DATA & EXTERNAL SERVICES                                 │
 │     • Atlas Travel API → bridge to Airline Systems / GDS     │
 │     • Database (user PNRs, audit logs) — Alibaba RDS/Redis   │
+│     ← today: mock_gds_bookings + local MySQL                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -367,18 +619,13 @@ Rebound has two main flows. Both are made as simple as possible.
 | LLM & Compute | **Alibaba Cloud** | Qwen (Model Studio) + Function Compute + Database |
 | Actions & Data | **Atlas Travel API** | Bridge to airline/GDS systems for all real operations |
 
----
+**The migration path, in order:**
 
-## 🧪 Tech Stack
-
-| Category | Technology |
-| :--- | :--- |
-| **Agent Platform** | Qoder |
-| **LLM** | Qwen (Alibaba Cloud Model Studio) |
-| **Compute** | Alibaba Cloud Function Compute |
-| **Database** | Alibaba Cloud RDS / Redis |
-| **Travel API** | Atlas Travel API |
-| **Frontend** | Chat-based interface with dynamic components |
+1. Register the six tools as JSON schemas and replace the single-turn call with a real ReAct loop — the biggest functional gap.
+2. Swap `MockGdsBooking` queries for Atlas API calls behind the same method signatures.
+3. Start writing `agent_action_logs` on every tool invocation, completing the audit trail.
+4. Extract the tool wrappers into Function Compute; Laravel stays as the presentation and auth tier.
+5. Point the database at Alibaba RDS, with Redis for sessions and cache.
 
 ---
 
@@ -410,18 +657,39 @@ cd rebound
 composer install
 npm install
 
-# 3. Setup environment and database
+# 3. Setup environment
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite  # SQLite default setup
+
+# 4. Configure the database in .env, then migrate & seed
+#    The project is developed against MySQL:
+#      DB_CONNECTION=mysql
+#      DB_DATABASE=rebound_db
+#    Create the schema first, then:
 php artisan migrate:fresh --seed
 
-# 4. Build assets & start dev server
-npm run build
-php artisan serve
+# 5. Start the dev server
+php artisan serve          # → http://127.0.0.1:8000
 ```
 
-For full API endpoint documentation, database schema details, and demo seed data, see the detailed [Rebound App Documentation](file:///home/haikal/Documents/Alibaba-Hackathon-2026/rebound/README.md).
+**Required configuration:**
+
+| Variable | Needed for | If omitted |
+| :--- | :--- | :--- |
+| `DB_*` | All persistence | The app cannot boot |
+| `FIREBASE_CREDENTIALS` | Server-side token verification | Login fails |
+| `FIREBASE_WEB_*` | The browser Firebase SDK | The login page cannot obtain a token |
+| `QWEN_API_KEY` | Live LLM reasoning | Falls back to the simulation engine — the demo still runs |
+
+Verify the stack is up with the public health endpoint:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+> ℹ️ Assets are loaded from CDNs at runtime (Tailwind Play, Alpine, JsBarcode), so **no build step is required** to run the demo. `npm install && npm run build` is only needed if you switch to the Vite-compiled pipeline.
+
+For endpoint details, the database schema, and demo seed data, see [Architecture](#-architecture) and [Data Model](#-data-model) above.
 
 ---
 
@@ -450,13 +718,28 @@ For full API endpoint documentation, database schema details, and demo seed data
 
 ## 🗺 Roadmap
 
+**Done**
+
+- [x] Build the chat-based frontend with dynamic components
+- [x] Verify the Atlas Travel API returns usable flight data ([sample response](#sample-atlas-api-response))
+- [x] Authentication (email/password + Google Sign-In via Firebase)
+- [x] Database schema for PNRs, chat sessions, messages, action logs, and vouchers
+
+**In progress**
+
 - [ ] Define the tool schemas (JSON) and register them in Qoder
 - [ ] Implement the Integration Layer (Atlas API wrappers on Function Compute)
-- [ ] Build the chat-based frontend with dynamic components
+- [ ] Wire `search_alternatives` end-to-end as the first live tool
 - [ ] Wire up the simulated disruption (delay) trigger
 - [ ] Prepare the initial data (seed PNRs) in the sandbox
 - [ ] End-to-end demo of both flows
 - [ ] Pitch deck & presentation
+
+**Next phase — beyond the hackathon scope**
+
+- [ ] **Multi-segment rebooking** — when one leg is disrupted and a connection becomes unreachable, re-plan and reissue the *entire* itinerary rather than a single flight. See [Known Design Gap](#-known-design-gap--multi-segment-itineraries).
+- [ ] **Alternate-airport awareness** — surface replacement flights that land at a different airport serving the same city (e.g. SZB instead of KUL), so a passenger is never silently rerouted.
+- [ ] **Pre-booking trip planning** — deliberately out of scope for now. Searching and buying new tickets is OTA territory, and Rebound's value comes from staying focused on the post-booking phase.
 
 ---
 
