@@ -77,7 +77,7 @@
                     </div>
                     <div>
                         <div class="font-semibold" x-text="lang === 'id' ? 'Pengalihan Bagasi Otomatis' : 'Automatic Baggage Transfer'"></div>
-                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Tag bagasi #GA-489102 dialihkan ke ' + flight.alternative.flightNumber : 'Bag tag #GA-489102 routed to ' + flight.alternative.flightNumber"></div>
+                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Tag bagasi ' + baggageTag + ' dialihkan ke ' + flight.alternative.flightNumber : 'Bag tag ' + baggageTag + ' routed to ' + flight.alternative.flightNumber"></div>
                     </div>
                 </div>
                 <span x-show="rebookStep > 2" class="text-[9px] font-bold text-emerald-700 uppercase bg-emerald-100 px-1.5 py-0.2 rounded">OK</span>
@@ -95,7 +95,7 @@
                     </div>
                     <div>
                         <div class="font-semibold" x-text="lang === 'id' ? 'Penerbitan Boarding Pass ' + flight.alternative.flightNumber : flight.alternative.flightNumber + ' Boarding Pass Issuance'"></div>
-                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Kursi 14A (Jendela) • Gate ' + (flight.alternative.gate || '4A') : 'Seat 14A (Window) • Gate ' + (flight.alternative.gate || '4A')"></div>
+                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Kursi ' + activeFlight.seat + ' • Gate ' + (flight.alternative.gate || '4A') : 'Seat ' + activeFlight.seat + ' • Gate ' + (flight.alternative.gate || '4A')"></div>
                     </div>
                 </div>
                 <span x-show="rebookStep > 3" class="text-[9px] font-bold text-emerald-700 uppercase bg-emerald-100 px-1.5 py-0.2 rounded">OK</span>
@@ -111,7 +111,7 @@
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                 <span x-text="rebookStep < 4 ? (lang === 'id' ? 'Sedang memproses tiket...' : 'Processing...') : (lang === 'id' ? 'Penerbangan berhasil dipindahkan!' : 'Rebooking complete!')"></span>
             </span>
-            <span class="font-mono text-slate-400">GA-9821A</span>
+            <span class="font-mono text-slate-400" x-text="activeFlight.pnr"></span>
         </div>
 
     </div>

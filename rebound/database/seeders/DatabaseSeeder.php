@@ -45,6 +45,10 @@ class DatabaseSeeder extends Seeder
         // id: Isi sesi chat & riwayat pesan AI agent
         // en: Populate AI agent chat sessions & message history
         $this->call(AgentChatSeeder::class);
+
+        // id: Sinkronkan file lang statis ke tabel translations (sumber terjemahan dinamis)
+        // en: Synchronize static lang files into the translations table (dynamic translation source)
+        $this->call(TranslationSeeder::class);
     }
 }
 

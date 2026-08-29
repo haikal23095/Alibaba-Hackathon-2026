@@ -7,14 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-function pnrUser(): User
-{
-    return User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-    ]);
-}
+// id: pnrUser() & fakeQwenChat() kini didefinisikan global di tests/Pest.php
+// en: pnrUser() & fakeQwenChat() are now defined globally in tests/Pest.php
 
 test('aktivasi PNR tersimpan di database sehingga dashboard tidak memunculkan modal lagi', function () {
     $user = pnrUser();
@@ -42,6 +36,7 @@ test('hanya ada satu PNR aktif per user', function () {
 });
 
 test('percakapan chat tersimpan dan bisa dimuat kembali lewat history', function () {
+    fakeQwenChat();
     $user = pnrUser();
     $this->actingAs($user)->postJson('/api/pnr/activate', ['pnr_code' => 'GA826'])->assertOk();
 
@@ -61,6 +56,7 @@ test('percakapan chat tersimpan dan bisa dimuat kembali lewat history', function
 });
 
 test('history chat PNR milik user lain tidak bisa diakses', function () {
+    fakeQwenChat();
     $user = pnrUser();
     $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'password']);
 
@@ -106,6 +102,7 @@ test('dashboard mengirim daftar tiket asli user dari database ke modal', functio
 //     and the UI language parameter (lang) is validated.
 
 test('balasan AI disimpan ke database dalam bahasa Inggris (replyEn)', function () {
+    fakeQwenChat();
     $user = pnrUser();
     $this->actingAs($user)->postJson('/api/pnr/activate', ['pnr_code' => 'GA826'])->assertOk();
 

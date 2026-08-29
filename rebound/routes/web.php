@@ -35,6 +35,8 @@ Route::get('/lang/{locale}', function (string $locale) {
 
 use App\Models\AgentChatSession;
 use App\Models\MockGdsBooking;
+use App\Models\Rebooking;
+use App\Models\Translation;
 
 // id: Dashboard Utama & Asisten Penerbangan REBOUND (Wajib Login)
 // en: Protected Dashboard & REBOUND Flight Assistant (Authentication Required)
@@ -237,6 +239,37 @@ Route::middleware('auth')->group(function () {
             ];
         };
 
+        // id: Lapis 1 saran prompt kontekstual — dibangun dari data booking riil (status GDS + nomor
+        //     penerbangan) tanpa panggilan AI, sehingga chip saran tampil instan untuk semua PNR.
+        //     Logika teks identik dengan ChatController::ruleBasedSuggestions() agar endpoint saran
+        //     AI menghasilkan fallback yang sama ketika Qwen offline / API key belum dikonfigurasi.
+        // en: Layer-1 contextual prompt suggestions — built from real booking data (GDS status + flight
+        //     number) with no AI call, so suggestion chips render instantly for every PNR. The wording is
+        //     identical to ChatController::ruleBasedSuggestions() so the AI suggestion endpoint yields the
+        //     same fallback when Qwen is offline / the API key is not configured.
+        $buildSuggestions = static function (?MockGdsBooking $booking): array {
+            if (!$booking) {
+                return [];
+            }
+
+            $flight = trim((string) $booking->flight_number);
+
+            return match ($booking->status) {
+                'delayed' => [
+                    ['id' => "Lihat opsi rebooking gratis untuk penerbangan {$flight}", 'en' => "View free rebooking options for flight {$flight}"],
+                    ['id' => 'Cek hak kompensasi & meal voucher saya', 'en' => 'Check my compensation & meal voucher entitlements'],
+                ],
+                'cancelled' => [
+                    ['id' => "Klaim kompensasi pembatalan penerbangan {$flight}", 'en' => "Claim cancellation compensation for flight {$flight}"],
+                    ['id' => 'Lihat opsi rebooking & refund tersedia', 'en' => 'View available rebooking & refund options'],
+                ],
+                default => [
+                    ['id' => "Cek status terkini penerbangan {$flight}", 'en' => "Check the latest status of flight {$flight}"],
+                    ['id' => 'Berapa batas bagasi terdaftar tiket saya?', 'en' => 'What is my checked baggage allowance?'],
+                ],
+            };
+        };
+
         $bookingsByPnr = MockGdsBooking::whereIn(
             'pnr_code',
             $userTickets->pluck('pnr_code')->filter()->values()->all()
@@ -248,6 +281,9 @@ Route::middleware('auth')->group(function () {
         })->all();
         $alternativeFlightsByPnr = $bookingsByPnr->mapWithKeys(function (MockGdsBooking $booking) use ($buildAlternativeFlights) {
             return [$booking->pnr_code => $buildAlternativeFlights($booking)];
+        })->all();
+        $suggestionsByPnr = $bookingsByPnr->mapWithKeys(function (MockGdsBooking $booking) use ($buildSuggestions) {
+            return [$booking->pnr_code => $buildSuggestions($booking)];
         })->all();
 
 
@@ -301,15 +337,37 @@ Route::middleware('auth')->group(function () {
                 'created_at' => $notification->created_at->toIso8601String(),
             ]);
 
+        // id: Katalog terjemahan dinamis — baris tabel translations menimpa nilai file lang statis
+        //     (lang/id/messages.php & lang/en/messages.php), sehingga teks UI dapat diubah lewat
+        //     database/API tanpa deploy ulang; key tanpa baris DB tetap memakai nilai file.
+        // en: Dynamic translation catalogue — translations table rows override the static lang file
+        //     values (lang/id/messages.php & lang/en/messages.php), so UI copy can be edited via the
+        //     database/API without redeploying; keys without a DB row keep the file value.
+        $translations = Translation::catalogue();
+
+        // id: Hasil rebooking user dari tabel rebookings — menggantikan state localStorage frontend.
+        //     Dipetakan menjadi rebookingsByPnr (PNR -> objek penerbangan alternatif) agar status
+        //     'rebooked' + data alternatif pulih dari database saat halaman dimuat, lintas perangkat.
+        // en: The user's rebooking results from the rebookings table — replacing the frontend
+        //     localStorage state. Mapped to rebookingsByPnr (PNR -> alternative flight object) so the
+        //     'rebooked' status + alternative data are restored from the database on page load, across devices.
+        $rebookingsByPnr = Rebooking::where('user_id', $user->id)
+            ->get()
+            ->mapWithKeys(fn(Rebooking $rebooking) => [$rebooking->pnr_code => $rebooking->alternative_flight])
+            ->all();
+
         return view('welcome', [
             'hasSetupPnr' => $activePnrCode !== null,
             'activePnrCode' => $activePnrCode,
             'activeFlightProfile' => $activeFlightProfile,
             'flightProfiles' => $flightProfiles,
             'alternativeFlightsByPnr' => $alternativeFlightsByPnr,
+            'suggestionsByPnr' => $suggestionsByPnr,
             'userTickets' => $userTickets,
             'chatSessions' => $chatSessions,
             'notifications' => $notifications,
+            'translations' => $translations,
+            'rebookingsByPnr' => $rebookingsByPnr,
         ]);
 
     })->name('dashboard');

@@ -334,15 +334,58 @@
                 isTyping: false,
 
 
-                // #BACKEND Dynamic Context-Aware Prompt Suggestions
-                // id: Saran prompt ini masih statis — harus diambil dari API AI (Qwen/Atlas) berdasarkan konteks penerbangan real-time pengguna
-                // en: These prompt suggestions are static — must be fetched from AI API (Qwen/Atlas) based on user's real-time flight context
+                // id: baggageTag & eticketNumber — nilai turunan deterministik dari PNR tiket aktif,
+                //     sehingga tag bagasi & nomor e-tiket tampil konsisten di chat, modal rebooking,
+                //     dan semua file unduhan boarding pass (bukan lagi string beku #GA-489102 / GA-9821A).
+                // en: baggageTag & eticketNumber — deterministic values derived from the active ticket PNR,
+                //     so the baggage tag & e-ticket number stay consistent across chat, rebooking modals,
+                //     and every boarding pass download (no more frozen #GA-489102 / GA-9821A strings).
+                // #BACKEND id: Nanti harus diganti nomor tag bagasi & e-tiket asli dari database bookings
+                // #BACKEND en: Later must be replaced by real baggage tag & e-ticket numbers from the bookings database
+                get baggageTag() {
+                    const seed = (this.selectedTicketId || 'GA826').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    let hash = 7;
+                    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 1000000;
+                    return '#' + this.activeFlight.airlineCode + '-' + String(hash).padStart(6, '0');
+                },
+                get eticketNumber() {
+                    const seed = (this.selectedTicketId || 'GA826').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    let hash = 13;
+                    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 1000000000;
+                    return '126-' + String(hash).padStart(9, '0');
+                },
+
+                // #BACKEND Dynamic Context-Aware Prompt Suggestions (hybrid 2 lapis)
+                // id: Lapis 1 — suggestionsByPnr kiriman backend dibangun dari data booking riil
+                //     (status GDS + nomor penerbangan), tampil instan tanpa panggilan AI.
+                //     Lapis 2 — refreshAiSuggestions() meminta Qwen merumuskan saran kontekstual
+                //     secara async lalu menggantikan chip bila respons tiba (cache per PNR).
+                // en: Layer 1 — suggestionsByPnr from the backend is built from real booking data
+                //     (GDS status + flight number) and renders instantly with no AI call.
+                //     Layer 2 — refreshAiSuggestions() asks Qwen for contextual suggestions async
+                //     and swaps the chips once the response arrives (cached per PNR).
                 get dynamicSuggestions() {
+                    // id: Hasil Qwen (lapis 2) menang bila sudah tiba untuk tiket aktif
+                    // en: Qwen output (layer 2) wins once it has arrived for the active ticket
+                    const aiCached = this.aiSuggestionCache?.[this.selectedTicketId];
+                    if (Array.isArray(aiCached) && aiCached.length > 0) {
+                        return aiCached;
+                    }
+
+                    // id: Lapis 1 — saran berbasis aturan dari backend per PNR
+                    // en: Layer 1 — rule-based suggestions from the backend per PNR
+                    const backendSuggestions = this.suggestionsByPnr?.[this.selectedTicketId];
+                    if (Array.isArray(backendSuggestions) && backendSuggestions.length > 0) {
+                        return backendSuggestions;
+                    }
+
+                    // id: Tiket demo tanpa profil backend — skenario kurasi dipertahankan
+                    // en: Demo tickets without backend profiles — curated scenarios preserved
                     if (this.selectedTicketId === 'GA826') {
                         if (this.flightStatus === 'rebooked') {
                             return [
                                 { id: 'Lihat e-Boarding Pass baru penerbangan ' + this.flight.alternative.flightNumber, en: 'View new ' + this.flight.alternative.flightNumber + ' e-Boarding Pass' },
-                                { id: 'Cek status pengalihan bagasi #GA-489102', en: 'Check baggage transfer status #GA-489102' }
+                                { id: 'Cek status pengalihan bagasi ' + this.baggageTag, en: 'Check baggage transfer status ' + this.baggageTag }
                             ];
                         }
                         return [
@@ -350,12 +393,14 @@
                             { id: 'Tanyakan tentang kondisi cuaca di jadwal penerbangan Anda..', en: 'Ask about weather conditions affecting your flight..' },
                             { id: 'Bagaimana hak kompensasi & makanan saya?', en: 'What are my compensation and meal entitlements?' }
                         ];
-                    } else if (this.selectedTicketId === 'SQ951') {
+                    }
+                    if (this.selectedTicketId === 'SQ951') {
                         return [
                             { id: 'Lokasi Plaza Premium Lounge di Terminal 3', en: 'Plaza Premium Lounge location at Terminal 3' },
                             { id: 'Berapa batas berat bagasi kabin Business Class?', en: 'What is Business Class cabin baggage allowance?' }
                         ];
-                    } else if (this.selectedTicketId === 'SQ638') {
+                    }
+                    if (this.selectedTicketId === 'SQ638') {
                         return [
                             { id: 'Cek prakiraan cuaca di Haneda (HND)', en: 'Check weather forecast at Haneda (HND)' },
                             { id: 'Berapa batas berat bagasi kabin Singapore Airlines?', en: 'What is Singapore Airlines cabin baggage allowance?' }
@@ -374,14 +419,26 @@
                     return this.alternativeFlightsByPnr?.[this.selectedTicketId] || [];
                 },
 
-                // id: translations — Katalog terjemahan dari file lang/id/messages.php dan lang/en/messages.php Laravel
-                // en: translations — Translation catalogue from Laravel's lang/id/messages.php and lang/en/messages.php files
-                // #BACKEND id: Saat ini dari file statis. Nanti bisa dari database translations table untuk terjemahan dinamis
-                // #BACKEND en: Currently from static files. Can later come from database translations table for dynamic translations
-                translations: {
-                    id: @json(trans('messages', [], 'id')),
-                    en: @json(trans('messages', [], 'en'))
-                },
+                // id: Saran prompt lapis 1 dari backend (rule-based per PNR) + cache saran lapis 2 dari Qwen
+                // en: Layer-1 prompt suggestions from the backend (rule-based per PNR) + layer-2 Qwen suggestion cache
+                suggestionsByPnr: @json($suggestionsByPnr ?? []),
+                aiSuggestionCache: {},
+
+                // id: Hasil rebooking dari tabel rebookings kiriman rute dashboard (PNR -> objek
+                //     penerbangan alternatif). Dipakai restoreRebookedState() untuk memulihkan status
+                //     'rebooked' dari database — menggantikan penyimpanan localStorage sepenuhnya.
+                // en: Rebooking results from the rebookings table sent by the dashboard route (PNR ->
+                //     alternative flight object). Used by restoreRebookedState() to restore the 'rebooked'
+                //     status from the database — fully replacing the localStorage storage.
+                rebookingsByPnr: @json($rebookingsByPnr ?? []),
+
+                // id: translations — Katalog terjemahan dinamis kiriman rute dashboard: baris tabel
+                //     translations (dikelola via POST /api/translations) menimpa nilai file lang statis,
+                //     jadi teks UI bisa diubah dari database tanpa menyentuh file lang/id & lang/en.
+                // en: translations — Dynamic translation catalogue sent by the dashboard route: rows in
+                //     the translations table (managed via POST /api/translations) override the static lang
+                //     file values, so UI copy can be edited from the database without touching lang/id & lang/en.
+                translations: @json($translations ?? ['id' => [], 'en' => []]),
 
                 // id: t(key) — Helper function untuk mengambil terjemahan berdasarkan bahasa aktif. Jika key tidak ditemukan, return key itu sendiri.
                 // en: t(key) — Helper function to get translation based on active language. If key not found, returns the key itself.
@@ -428,7 +485,7 @@
                             const paxName = (this.currentUser && this.currentUser.name) ? this.currentUser.name.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase() : 'ZAKARIA';
                             // id: Format barcode standar IATA BCBP (Bar Coded Boarding Pass)
                             // en: Standard IATA BCBP (Bar Coded Boarding Pass) format
-                            const codeVal = `M1${paxName}-${flightNo}-14A`;
+                            const codeVal = `M1${paxName}-${flightNo}-${this.activeFlight.seat}`;
                             try {
                                 JsBarcode(barcodeEl, codeVal, {
                                     format: "CODE128",
@@ -515,6 +572,7 @@
                         ];
 
                         this.loadChatHistory();
+                        this.refreshAiSuggestions(id);
                         return;
                     }
 
@@ -650,14 +708,14 @@
                     //     tiket demo tidak selalu jatuh ke default 'on-time'.
                     //     Tiket demo (GA826/SQ951/SQ638) sengaja tidak di-override karena skenario & teks
                     //     percakapannya sudah dikurasi manual; status 'rebooked' juga tidak ditimpa karena
-                    //     berasal dari aksi rebooking user yang dipulihkan dari localStorage.
+                    //     berasal dari aksi rebooking user yang dipulihkan dari tabel rebookings di database.
                     // en: Override status with real database data — the session card in chatSessions carries the
                     //     mock_gds_bookings table status (delayed/on_time/cancelled/flown) sent by the server,
                     //     so the top card status badge follows the actual GDS condition and PNRs outside the
                     //     demo tickets no longer always fall back to the 'on-time' default.
                     //     Demo tickets (GA826/SQ951/SQ638) are intentionally left untouched because their
                     //     scenario & chat copy are manually curated; 'rebooked' is never overridden because it
-                    //     comes from the user's rebooking action restored from localStorage.
+                    //     comes from the user's rebooking action restored from the rebookings table in the database.
                     const demoTicketIds = ['GA826', 'SQ951', 'SQ638'];
                     const sessionCard = Array.isArray(this.chatSessions)
                         ? this.chatSessions.find(s => s.pnr_code === id)
@@ -681,6 +739,42 @@
                     // en: Load stored chat history from the database for this ticket — if history exists,
                     //     it replaces the initial greeting so the old conversation continues.
                     this.loadChatHistory();
+                    this.refreshAiSuggestions(id);
+                },
+
+                // id: refreshAiSuggestions(pnr) — Lapis 2 saran prompt: panggil POST /api/chat/suggestions
+                //     secara async; chip saran lapis-1 sudah tampil lebih dulu dan langsung digantikan
+                //     begitu respons Qwen tiba. Hasil di-cache per PNR agar pindah tab tidak memicu
+                //     panggilan ulang; guard selectedTicketId mencegah saran melompat ke tiket lain
+                //     bila user berpindah tab sebelum respons datang.
+                // en: refreshAiSuggestions(pnr) — Layer-2 prompt suggestions: async call to
+                //     POST /api/chat/suggestions; the layer-1 chips are already visible and get swapped
+                //     as soon as the Qwen response arrives. Results are cached per PNR so switching tabs
+                //     does not refetch; the selectedTicketId guard prevents suggestions jumping onto
+                //     another ticket if the user switches tabs before the response lands.
+                refreshAiSuggestions(pnr) {
+                    if (!pnr || this.aiSuggestionCache[pnr]) {
+                        return;
+                    }
+                    fetch('/api/chat/suggestions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ pnr: pnr, lang: this.lang })
+                    })
+                    .then(response => response.ok ? response.json() : null)
+                    .then(data => {
+                        if (data && data.status === 'success' && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                            this.aiSuggestionCache[pnr] = data.suggestions;
+                            if (this.selectedTicketId === pnr) {
+                                this.dynamicSuggestions = data.suggestions;
+                            }
+                        }
+                    })
+                    .catch(() => {});
                 },
 
                 // id: setStatus(status) — Mengubah status penerbangan secara manual (untuk demo). Jika status 'rebooked', otomatis pindah ke tab jadwal.
@@ -782,34 +876,46 @@
                     this.rebookFlight(altFlight);
                 },
 
-                // #BACKEND id: persistRebookedState() — Saat ini status rebooking disimpan di localStorage per PNR agar bertahan setelah refresh.
-                //     Di produksi: status rebooked harus berasal dari database bookings (kolom status + flight rebooking) via API.
-                // en: persistRebookedState() — Currently rebooking state is stored in localStorage per PNR so it survives refresh.
-                //     In production: the rebooked status must come from the bookings database (status column + rebooked flight) via API.
+                // id: persistRebookedState() — Menyimpan hasil rebooking ke database via POST /api/rebook
+                //     (tabel rebookings, satu baris per user + PNR), menggantikan localStorage sehingga
+                //     status rebooked bertahan lintas perangkat/browser & tercatat di server. Key localStorage
+                //     lama ikut dibersihkan agar tidak ada sisa data lokal.
+                // en: persistRebookedState() — Saves the rebooking result to the database via POST /api/rebook
+                //     (rebookings table, one row per user + PNR), replacing localStorage so the rebooked status
+                //     survives across devices/browsers & is recorded server-side. The old localStorage key is
+                //     also cleaned up so no local leftover remains.
                 persistRebookedState() {
                     try {
-                        localStorage.setItem('rebound_rebooked_' + this.selectedTicketId, JSON.stringify({
-                            flightStatus: 'rebooked',
-                            alternative: this.flight.alternative,
-                            savedAt: new Date().toISOString(),
-                        }));
+                        localStorage.removeItem('rebound_rebooked_' + this.selectedTicketId);
                     } catch (e) { }
+                    fetch('/api/rebook', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ pnr: this.selectedTicketId, alternative: this.flight.alternative })
+                    }).catch(() => { });
                 },
 
-                // id: restoreRebookedState() — Dipanggil di init() setelah selectTicket(); jika ada state rebooking tersimpan
-                //     untuk tiket aktif, pulihkan flight.alternative & flightStatus 'rebooked'.
-                // en: restoreRebookedState() — Called in init() after selectTicket(); if a saved rebooking state exists for the
-                //     active ticket, restores flight.alternative & 'rebooked' flightStatus.
+                // id: restoreRebookedState() — Dipanggil di init() setelah selectTicket(); jika rebookingsByPnr
+                //     kiriman server memuat rebooking untuk tiket aktif, pulihkan flight.alternative &
+                //     flightStatus 'rebooked' dari database. Key localStorage warisan versi lama dibersihkan
+                //     agar tidak ada data lokal tersisa.
+                // en: restoreRebookedState() — Called in init() after selectTicket(); if the server-supplied
+                //     rebookingsByPnr holds a rebooking for the active ticket, restores flight.alternative &
+                //     the 'rebooked' flightStatus from the database. The legacy localStorage key from the old
+                //     version is cleaned up so no local data remains.
                 restoreRebookedState() {
                     try {
-                        const raw = localStorage.getItem('rebound_rebooked_' + this.selectedTicketId);
-                        if (!raw) return;
-                        const saved = JSON.parse(raw);
-                        if (saved && saved.flightStatus === 'rebooked' && saved.alternative && saved.alternative.flightNumber) {
-                            this.flight.alternative = saved.alternative;
-                            this.flightStatus = 'rebooked';
-                        }
+                        localStorage.removeItem('rebound_rebooked_' + this.selectedTicketId);
                     } catch (e) { }
+                    const saved = this.rebookingsByPnr?.[this.selectedTicketId];
+                    if (saved && saved.flightNumber) {
+                        this.flight.alternative = saved;
+                        this.flightStatus = 'rebooked';
+                    }
                 },
 
                 // #BACKEND Rebook action with multi-step telemetry dispatch animation
@@ -866,8 +972,8 @@
                                     sender: 'ai',
                                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                                     type: 'success_card',
-                                    textId: `Pengalihan ke ${target.flightNumber} berhasil dikonfirmasi. Klausul bebas penalti (Waiver 72A) aktif dan e-Boarding Pass baru telah diterbitkan untuk ${this.currentUser.name}. Bagasi tag #GA-489102 telah dialihkan ke pesawat baru.`,
-                                    textEn: `Rebooking to ${target.flightNumber} confirmed. Disruption fee waiver (Rule 72A) applied and new e-Boarding Pass issued for ${this.currentUser.name}. Baggage tag #GA-489102 has been routed to the new flight.`,
+                                    textId: `Pengalihan ke ${target.flightNumber} berhasil dikonfirmasi. Klausul bebas penalti (Waiver 72A) aktif dan e-Boarding Pass baru telah diterbitkan untuk ${this.currentUser.name}. Bagasi tag ${this.baggageTag} telah dialihkan ke pesawat baru.`,
+                                    textEn: `Rebooking to ${target.flightNumber} confirmed. Disruption fee waiver (Rule 72A) applied and new e-Boarding Pass issued for ${this.currentUser.name}. Baggage tag ${this.baggageTag} has been routed to the new flight.`,
                                     showSuccess: true
                                 });
                                 this.scrollToBottom();
@@ -968,9 +1074,11 @@
                     this.isTyping = true;
                     this.scrollToBottom();
 
-                    // #BACKEND AI Simulated Response
-                    // id: Respons AI ini masih simulasi/statis — harus diganti dengan panggilan ke AI API (Qwen/Atlas) untuk respons cerdas real-time
-                    // en: This AI response is still simulated/static — must be replaced with AI API call (Qwen/Atlas) for real-time intelligent responses
+                    // id: Respons AI nyata dari Qwen via backend Laravel (POST /api/chat/send) — tanpa mesin
+                    //     simulasi; bila Qwen tidak tersedia backend membalas pesan gangguan jujur (HTTP 503).
+                    // en: Real AI response from Qwen via the Laravel backend (POST /api/chat/send) — no
+                    //     simulation engine; when Qwen is unavailable the backend replies with an honest
+                    //     disruption message (HTTP 503).
                     try {
                         // 2. Tembak API Backend Laravel yang terhubung ke Qwen/Qoder
                         const response = await fetch('/api/chat/send', {
@@ -1082,22 +1190,22 @@
                                             <div class="grid">
                                                 <div><div class="label">GATE</div><div class="val gate">${gate}</div></div>
                                                 <div><div class="label">BOARDING</div><div class="val">${boarding}</div></div>
-                                                <div><div class="label">SEAT</div><div class="val">14A</div></div>
-                                                <div><div class="label">ZONE</div><div class="val">2</div></div>
+                                                <div><div class="label">SEAT</div><div class="val">${af.seat}</div></div>
+                                                <div><div class="label">ZONE</div><div class="val">${af.zone}</div></div>
                                             </div>
                                             <div class="baggage">
-                                                <span>Baggage Tag: <strong>#GA-489102</strong></span>
+                                                <span>Baggage Tag: <strong>${this.baggageTag}</strong></span>
                                                 <span style="color:#047857; font-weight:bold;">AUTO-TRANSFERRED</span>
                                             </div>
                                             <div class="stub">
                                                 <div>
                                                     <div style="font-size:10px; color:#64748b; font-weight:bold;">PASSENGER / NAMA PENUMPANG</div>
                                                     <div style="font-size:14px; font-weight:bold; margin-top:2px;">${this.currentUser.passenger}</div>
-                                                    <div style="font-size:11px; font-family:monospace; margin-top:4px; color:#0284c7;">PNR: GA-9821A • ETKT: 126-289410293</div>
+                                                    <div style="font-size:11px; font-family:monospace; margin-top:4px; color:#0284c7;">PNR: ${af.pnr} • ETKT: ${this.eticketNumber}</div>
                                                     <div style="font-size:11px; color:#059669; font-weight:bold; margin-top:4px;">Disruption Waiver 72A (Fee $0 / Rp 0)</div>
                                                 </div>
                                                 <div class="qr">
-                                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=REBOUND%20E-BOARDING%20PASS%20PNR%20GA-9821A%20${encodeURIComponent(this.currentUser.passenger)}%20${flightNo}%20GATE%20${gate}%20SEAT%2014A" alt="QR Code">
+                                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=REBOUND%20E-BOARDING%20PASS%20PNR%20${af.pnr}%20${encodeURIComponent(this.currentUser.passenger)}%20${flightNo}%20GATE%20${gate}%20SEAT%20${af.seat}" alt="QR Code">
                                                 </div>
                                             </div>
                                         </div>
@@ -1129,7 +1237,7 @@
                         const flightNo = afp.flightNumber;
                         const filename = `BoardingPass-${flightNo}-${this.currentUser.name.replace(/\s+/g, '_')}.pkpass`;
                         const dummyBlob = new Blob([
-                            `REBOUND AVIATION ELECTRONIC BOARDING PASS (.PKPASS)\n===================================================\nPassenger: ${this.currentUser.passenger}\nAirline: ${afp.airline}\nFlight: ${flightNo}\nRoute: ${afp.fromCode} -> ${afp.toCode}\nGate: ${afp.gate}\nSeat: ${afp.seat}\nZone: ${afp.zone}\nPNR: GA-9821A\nStatus: CONFIRMED\nDisruption Fee Waiver 72A: Rp 0\nBarcode: M1${this.currentUser.passenger.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase()} E${flightNo} E${afp.fromCode}${afp.toCode}\n===================================================`
+                            `REBOUND AVIATION ELECTRONIC BOARDING PASS (.PKPASS)\n===================================================\nPassenger: ${this.currentUser.passenger}\nAirline: ${afp.airline}\nFlight: ${flightNo}\nRoute: ${afp.fromCode} -> ${afp.toCode}\nGate: ${afp.gate}\nSeat: ${afp.seat}\nZone: ${afp.zone}\nPNR: ${afp.pnr}\nStatus: CONFIRMED\nDisruption Fee Waiver 72A: Rp 0\nBarcode: M1${this.currentUser.passenger.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase()} E${flightNo} E${afp.fromCode}${afp.toCode}\n===================================================`
                         ], { type: 'application/vnd.apple.pkpass' });
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(dummyBlob);
@@ -1168,7 +1276,7 @@
                     const af = this.activeFlight;
                     const flightNo = af.flightNumber;
                     const link = document.createElement('a');
-                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent('REBOUND PASS: PNR GA-9821A | ' + this.currentUser.passenger + ' | ' + flightNo + ' ' + af.fromCode + '->' + af.toCode + ' | SEAT: ' + af.seat + ' | GATE: ' + af.gate)}`;
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent('REBOUND PASS: PNR ' + af.pnr + ' | ' + this.currentUser.passenger + ' | ' + flightNo + ' ' + af.fromCode + '->' + af.toCode + ' | SEAT: ' + af.seat + ' | GATE: ' + af.gate)}`;
                     link.download = `BoardingPass-QR-${flightNo}.png`;
                     document.body.appendChild(link);
                     link.click();

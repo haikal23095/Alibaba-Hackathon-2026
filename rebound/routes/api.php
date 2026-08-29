@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TranslationController;
 /*
 |--------------------------------------------------------------------------
 | REBOUND Enterprise API Routes
@@ -39,6 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // id: Hapus sesi percakapan AI & riwayat pesan untuk menghemat memori
     // en: Delete AI chat session & message history to save storage space
     Route::delete('/chat/session/{id}', [ChatController::class, 'deleteSession']);
+    // id: Saran prompt cerdas (lapis 2) — Qwen merumuskan saran kontekstual per PNR; tanpa API key
+    //     respons berupa daftar kosong (source 'none') sehingga frontend mempertahankan saran lapis-1.
+    // en: Smart prompt suggestions (layer 2) — Qwen crafts contextual suggestions per PNR; without an
+    //     API key the response is an empty list (source 'none') so the frontend keeps layer-1 chips.
+    Route::post('/chat/suggestions', [ChatController::class, 'aiSuggestions']);
 
     // id: Pusat notifikasi — daftar alert operasional milik user (dari tabel notifications)
     //     dan penandaan semua notifikasi sebagai sudah dibaca dari dropdown navbar.
@@ -46,6 +52,13 @@ Route::middleware('auth:sanctum')->group(function () {
     //     and mark-all-read triggered from the navbar dropdown.
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+
+    // id: Terjemahan dinamis — katalog gabungan (DB menimpa file lang statis) dan upsert
+    //     baris terjemahan sehingga teks UI bisa diubah tanpa deploy ulang.
+    // en: Dynamic translations — merged catalogue (DB overriding static lang files) and row
+    //     upsert so UI copy can be edited without redeploying.
+    Route::get('/translations', [TranslationController::class, 'index']);
+    Route::post('/translations', [TranslationController::class, 'upsert']);
 
 
     // ---------------------------------------------------------
@@ -130,33 +143,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    // id: Persistensi hasil rebooking — status rebooked + penerbangan alternatif pilihan disimpan
+    //     ke tabel rebookings (satu baris per user + PNR), menggantikan localStorage frontend agar
+    //     bertahan lintas perangkat/browser dan tercatat di server.
+    // en: Rebooking result persistence — the rebooked status + chosen alternative flight are stored in
+    //     the rebookings table (one row per user + PNR), replacing frontend localStorage so it survives
+    //     across devices/browsers and is recorded server-side.
+    Route::post('/rebook', [FlightController::class, 'rebook']);
+
     // id: Verifikasi PNR asli ke GDS via Atlas CLI — jika valid, PNR + user_id dicatat ke tabel user_pnrs (MySQL rebound_db)
     // en: Real PNR verification against the GDS via Atlas CLI — when valid, the PNR + user_id are recorded in user_pnrs (MySQL rebound_db)
     Route::post('/pnr/verify', [FlightController::class, 'verify']);
-
-    // 4. Instant Rebooking Transaction Dispatch (Demo)
-    Route::post('/flights/rebook', function (Request $request) {
-        $targetFlight = $request->input('flightNumber', 'GA830');
-        $pnr = $request->input('pnr', 'GA-9821A');
-        $passenger = $request->input('passenger', 'Zakaria MP');
-
-        return response()->json([
-            'status' => 'confirmed',
-            'message' => "Rebooking to {$targetFlight} successfully processed via GDS Atlas.",
-            'data' => [
-                'pnr' => $pnr,
-                'passenger' => $passenger,
-                'flightNumber' => $targetFlight,
-                'seat' => '14A',
-                'zone' => 2,
-                'gate' => ($targetFlight === 'GA830' ? '4A' : '2A'),
-                'boardingPassIssued' => true,
-                'barcode' => "M1" . strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $passenger), 0, 8)) . "-{$targetFlight}-14A",
-                'disruptionWaiverApplied' => 'Rule 72A ($0 Fee)',
-                'baggageTag' => '#GA-489102 (Transferred)',
-            ],
-        ]);
-    });
     
 });
 

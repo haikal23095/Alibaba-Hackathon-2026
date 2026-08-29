@@ -94,6 +94,22 @@ class ChatController extends Controller
             // 7. HUBUNGI AI MODEL QWEN (Alibaba Cloud Model Studio / DashScope / Qoder API)
             $aiData = $this->callQwenLLM($userMessage, $flightContext, $chatHistory, $lang);
 
+            // id: Tanpa mesin simulasi — jika Qwen tidak tersedia (API key belum ada, offline,
+            //     atau output tidak valid), balas dengan pesan gangguan yang jujur agar frontend
+            //     tidak pernah menampilkan jawaban tiruan.
+            // en: No simulation engine — when Qwen is unavailable (missing API key, offline, or
+            //     invalid output), reply with an honest disruption message so the frontend never
+            //     presents fabricated answers.
+            if ($aiData === null) {
+                return response()->json([
+                    'type' => 'text',
+                    'replyId' => 'Layanan AI Qwen belum tersedia (API key belum dikonfigurasi atau layanan sedang gangguan). Silakan coba lagi sebentar lagi.',
+                    'replyEn' => 'The Qwen AI service is currently unavailable (API key not configured or the service is disrupted). Please try again shortly.',
+                    'showTicketPolicy' => false,
+                    'showRecommendation' => false,
+                ], 503);
+            }
+
             // 8. Simpan balasan AI ke database
             // id: Bentuk tersimpan kanonik adalah BAHASA INGGRIS (replyEn) sesuai keputusan produk;
             //     frontend tetap memilih tampilan id/en dari kedua field respons saat pesan baru diterima.
@@ -128,6 +144,74 @@ class ChatController extends Controller
                 'showRecommendation' => false,
             ], 500);
         }
+    }
+
+    /**
+     * id: Lapis 2 saran prompt kontekstual — meminta Qwen merumuskan dua saran pertanyaan singkat
+     *     berdasarkan konteks penerbangan riil PNR milik user. Jika Qwen belum dikonfigurasi / gagal,
+     *     respons membawa daftar kosong (source 'none') sehingga frontend mempertahankan saran
+     *     lapis-1 — tanpa jawaban tiruan dari mesin simulasi.
+     * en: Layer-2 contextual prompt suggestions — asks Qwen to craft two short question suggestions
+     *     based on the real flight context of the user's PNR. When Qwen is unconfigured / fails, the
+     *     response carries an empty list (source 'none') so the frontend keeps the layer-1
+     *     suggestions — no fabricated answers from a simulation engine.
+     */
+    public function aiSuggestions(Request $request)
+    {
+        $request->validate([
+            'pnr' => 'required|string|max:10',
+            'lang' => 'nullable|in:id,en',
+        ]);
+
+        $user = $request->user();
+        $pnrCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $request->input('pnr')));
+        $lang = $request->input('lang', 'id') === 'en' ? 'en' : 'id';
+
+        // id: PNR harus terverifikasi milik user yang sedang login
+        // en: The PNR must be verified as belonging to the logged-in user
+        $validPnr = UserPnr::where('user_id', $user->id)
+                           ->where('pnr_code', $pnrCode)
+                           ->first();
+
+        if (!$validPnr) {
+            return response()->json([
+                'status' => 'error',
+                'suggestions' => [],
+            ], 403);
+        }
+
+        $gdsBooking = MockGdsBooking::where('pnr_code', $pnrCode)->first();
+        $flightContext = [
+            'pnr' => $pnrCode,
+            'flight_number' => $gdsBooking?->flight_number ?? $pnrCode,
+            'route' => ($gdsBooking?->from_code ?? 'CGK') . ' ➔ ' . ($gdsBooking?->to_code ?? 'SIN'),
+            'departure_time' => $gdsBooking?->departure_time?->format('Y-m-d H:i') ?? '',
+            'cabin_class' => $gdsBooking?->cabin_class ?? 'Economy',
+            'status' => $gdsBooking?->status ?? 'active',
+            'waiver_eligible' => in_array($gdsBooking?->status, ['delayed', 'cancelled']),
+        ];
+
+        $aiSuggestions = $this->callQwenForSuggestions($flightContext, $lang);
+
+        if ($aiSuggestions !== null) {
+            return response()->json([
+                'status' => 'success',
+                'source' => 'ai',
+                'pnr_code' => $pnrCode,
+                'suggestions' => $aiSuggestions,
+            ], 200);
+        }
+
+        // id: Qwen tidak tersedia — kembalikan daftar kosong sehingga frontend mempertahankan
+        //     saran lapis-1 (rule-based) yang sudah dirender dari dashboard.
+        // en: Qwen unavailable — return an empty list so the frontend keeps the layer-1
+        //     (rule-based) suggestions already rendered from the dashboard.
+        return response()->json([
+            'status' => 'success',
+            'source' => 'none',
+            'pnr_code' => $pnrCode,
+            'suggestions' => [],
+        ], 200);
     }
 
     /**
@@ -174,6 +258,133 @@ class ChatController extends Controller
     }
 
     /**
+     * id: Prompt khusus generator saran — output JSON murni berisi maksimal 3 saran bilingual
+     *     yang relevan dengan kondisi penerbangan (delay/batal/normal) tanpa halusinasi jadwal.
+     * en: Dedicated suggestion-generator prompt — pure JSON output containing up to 3 bilingual
+     *     suggestions relevant to the flight condition (delayed/cancelled/normal) without hallucinating schedules.
+     */
+    private function getSuggestionPrompt(): string
+    {
+        return <<<PROMPT
+Anda adalah mesin saran prompt untuk REBOUND, asisten krisis penerbangan enterprise.
+
+TUGAS: Rumuskan 2 saran pertanyaan pendek yang paling relevan untuk penumpang berdasarkan DATA PENERBANGAN (flight_context) yang diberikan.
+
+ATURAN WAJIB:
+1. Respons HARUS berupa JSON murni tanpa pembungkus Markdown: {"suggestions":[{"id":"...","en":"..."},{"id":"...","en":"..."}]}
+2. Field "id" ditulis dalam Bahasa Indonesia dan "en" dalam Bahasa Inggris; keduanya harus bermakna sama.
+3. Setiap saran maksimal 90 karakter, berbentuk pertanyaan atau permintaan singkat yang bisa langsung dikirim penumpang ke asisten.
+4. DILARANG mengarang jadwal, waktu, atau kebijakan yang tidak ada di flight_context.
+5. Saran harus mengikuti kondisi status: delay/pembatalan fokus pada rebooking, kompensasi, dan waiver; status normal fokus pada check-in, bagasi, fasilitas bandara, atau cuaca rute.
+PROMPT;
+    }
+
+    /**
+     * id: Memanggil Qwen khusus untuk menghasilkan saran prompt; mengembalikan null bila API key
+     *     belum dikonfigurasi, panggilan gagal, atau output JSON tidak valid (frontend lalu
+     *     mempertahankan saran lapis-1 yang sudah tampil lebih dulu — tanpa jawaban tiruan).
+     * en: Calls Qwen exclusively to generate prompt suggestions; returns null when the API key is
+     *     unconfigured, the call fails, or the JSON output is invalid (the frontend then keeps the
+     *     layer-1 suggestions already on screen — no fabricated answers).
+     */
+    private function callQwenForSuggestions(array $flightContext, string $lang): ?array
+    {
+        $apiKey = config('services.qwen.api_key')
+            ?: env('QWEN_API_KEY', env('DASHSCOPE_API_KEY', env('QODER_API_KEY')));
+
+        $endpoint = config('services.qwen.endpoint')
+            ?: env('QWEN_API_ENDPOINT', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
+
+        $model = config('services.qwen.model')
+            ?: env('QWEN_MODEL_NAME', 'qwen-max');
+
+        if (empty($apiKey)) {
+            return null;
+        }
+
+        try {
+            $messagesPayload = [
+                ['role' => 'system', 'content' => $this->getSuggestionPrompt()],
+                [
+                    'role' => 'system',
+                    'content' => "DATA PENERBANGAN RESMI GDS ATLAS (flight_context):\n" . json_encode($flightContext, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+                ],
+                [
+                    'role' => 'system',
+                    'content' => $lang === 'en'
+                        ? 'The user\'s app language setting is ENGLISH. Prioritize suggestions that read naturally in English for the "en" field; keep "id" in Bahasa Indonesia.'
+                        : 'Pengaturan bahasa aplikasi pengguna adalah BAHASA INDONESIA. Prioritaskan saran yang luwes dibaca dalam Bahasa Indonesia untuk field "id"; tetap tulis "en" dalam Bahasa Inggris.',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => 'Buat saran prompt sekarang berdasarkan flight_context di atas.',
+                ],
+            ];
+
+            // id: Timeout 30 detik — saran adalah fitur pelengkap; jangan memblokir UI lebih lama dari chat utama
+            // en: 30s timeout — suggestions are supplementary; never block the UI longer than the main chat
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . trim($apiKey),
+                    'Content-Type' => 'application/json',
+                ])
+                ->post($endpoint, [
+                    'model' => $model,
+                    'messages' => $messagesPayload,
+                    'temperature' => 0.5,
+                    'response_format' => ['type' => 'json_object']
+                ]);
+
+            if ($response->successful()) {
+                return $this->parseSuggestionJson($response->json('choices.0.message.content'));
+            }
+
+            Log::warning('Qwen suggestion API error: ' . $response->body());
+        } catch (Exception $e) {
+            Log::warning('Qwen suggestion HTTP exception, keeping layer-1 suggestions: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * id: Memvalidasi output JSON saran dari Qwen — maksimal 3 saran, tiap entri wajib punya id & en.
+     * en: Validates Qwen's suggestion JSON output — up to 3 suggestions, each entry must carry id & en.
+     */
+    private function parseSuggestionJson(?string $rawContent): ?array
+    {
+        if (empty($rawContent)) {
+            return null;
+        }
+
+        $clean = trim($rawContent);
+        $clean = preg_replace('/^```(?:json)?\s*/i', '', $clean);
+        $clean = preg_replace('/\s*```$/i', '', $clean);
+
+        $decoded = json_decode(trim($clean), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['suggestions']) || !is_array($decoded['suggestions'])) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($decoded['suggestions'] as $suggestion) {
+            if (!is_array($suggestion) || empty($suggestion['id']) || empty($suggestion['en'])) {
+                continue;
+            }
+            $items[] = [
+                'id' => mb_substr((string) $suggestion['id'], 0, 140),
+                'en' => mb_substr((string) $suggestion['en'], 0, 140),
+            ];
+            if (count($items) >= 3) {
+                break;
+            }
+        }
+
+        return count($items) > 0 ? $items : null;
+    }
+
+    /**
      * Merumuskan System Prompt (Instruksi Dasar AI) yang ketat.
      */
     private function getSystemPrompt(): string
@@ -203,10 +414,14 @@ PROMPT;
     }
 
     /**
-     * Mengirimkan HTTP Request ke Qwen API (Alibaba Cloud Model Studio / DashScope / Qoder API)
-     * dengan fallback otomatis ke mesin simulasi agen jika API Key belum dikonfigurasi.
+     * id: Mengirimkan HTTP Request ke Qwen API (Alibaba Cloud Model Studio / DashScope / Qoder API).
+     *     Mengembalikan null bila API key belum dikonfigurasi, panggilan gagal, atau output tidak
+     *     valid — TIDAK ADA mesin simulasi; kegagalan diteruskan sebagai pesan gangguan yang jujur.
+     * en: Sends the HTTP request to the Qwen API (Alibaba Cloud Model Studio / DashScope / Qoder API).
+     *     Returns null when the API key is unconfigured, the call fails, or the output is invalid —
+     *     there is NO simulation engine; failures surface as an honest disruption message.
      */
-    private function callQwenLLM(string $userMessage, array $flightContext, array $chatHistory, string $lang = 'id'): array
+    private function callQwenLLM(string $userMessage, array $flightContext, array $chatHistory, string $lang = 'id'): ?array
     {
         $apiKey = config('services.qwen.api_key') 
             ?: env('QWEN_API_KEY', env('DASHSCOPE_API_KEY', env('QODER_API_KEY')));
@@ -244,8 +459,8 @@ PROMPT;
 
                 $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
-                // id: Timeout 45 detik — model thinking Qwen bisa lambat pada prompt besar; di bawah itu berisiko fallback ke simulasi
-                // en: 45s timeout — Qwen thinking models can be slow on large prompts; less risks falling back to simulation
+                // id: Timeout 45 detik — model thinking Qwen bisa lambat pada prompt besar; di bawah itu berisiko gagal lalu berakhir sebagai pesan gangguan
+                // en: 45s timeout — Qwen thinking models can be slow on large prompts; less risks failing and ending as a disruption message
                 $response = Http::timeout(45)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . trim($apiKey),
@@ -272,8 +487,11 @@ PROMPT;
             }
         }
 
-        // Fallback otomatis ke Agen Penalaran Simulasi jika API Key belum dipasang / offline
-        return $this->simulateAgenticAI($userMessage, $flightContext);
+        // id: Qwen tidak tersedia (tanpa API key / offline / output tidak valid) — null diteruskan
+        //     ke pemanggil untuk diubah menjadi pesan gangguan yang jujur, BUKAN jawaban simulasi.
+        // en: Qwen unavailable (no API key / offline / invalid output) — null is passed back to the
+        //     caller to become an honest disruption message, NOT a simulated answer.
+        return null;
     }
 
     /**
@@ -304,91 +522,6 @@ PROMPT;
         }
 
         return null;
-    }
-
-    /**
-     * Mesin Penalaran Simulasi Agen AI (Fallback Cerdas Bilingual).
-     */
-    private function simulateAgenticAI(string $message, array $flightContext = []): array
-    {
-        $lowerMsg = strtolower($message);
-        $flightNo = $flightContext['flight_number'] ?? 'GA826';
-        $status = $flightContext['status'] ?? 'delayed';
-        $route = $flightContext['route'] ?? 'CGK ➔ SIN';
-
-        // 1. Cuaca / Weather / Delay Disruption Check
-        if (str_contains($lowerMsg, 'cuaca') || str_contains($lowerMsg, 'weather') || str_contains($lowerMsg, 'kondisi') || str_contains($lowerMsg, 'condition') || str_contains($lowerMsg, 'affecting') || str_contains($lowerMsg, 'forecast') || str_contains($lowerMsg, 'haneda') || str_contains($lowerMsg, 'hnd')) {
-            return [
-                'type' => 'disruption_alert',
-                'replyId' => "Penerbangan {$flightNo} ({$route}) terpengaruh oleh cuaca buruk (hujan deras & angin kencang). Estimasi keberangkatan diperbarui dengan keterlambatan 4 jam 25 menit. Sistem pemantauan Rebound aktif 24/7.",
-                'replyEn' => "Flight {$flightNo} ({$route}) is affected by severe weather conditions (heavy rain & high winds). Estimated departure updated with 4h 25m delay. Rebound monitoring active 24/7.",
-                'showTicketPolicy' => true,
-                'showRecommendation' => false,
-            ];
-        }
-
-        // 2. Opsi Penerbangan / Jadwal Alternatif / Besok / Tomorrow / Rebooking Search
-        if (str_contains($lowerMsg, 'opsi') || str_contains($lowerMsg, 'jadwal') || str_contains($lowerMsg, 'alternatif') || str_contains($lowerMsg, 'besok') || str_contains($lowerMsg, 'tomorrow') || str_contains($lowerMsg, 'ticket') || str_contains($lowerMsg, 'tickets') || str_contains($lowerMsg, 'flight') || str_contains($lowerMsg, 'morning') || str_contains($lowerMsg, 'schedule') || str_contains($lowerMsg, 'lain')) {
-            return [
-                'type' => 'options_list',
-                'replyId' => "Berikut daftar jadwal penerbangan alternatif dari sistem GDS Atlas yang tersedia untuk rute {$route}.",
-                'replyEn' => "Here is the list of available alternative flight schedules from the GDS Atlas system for route {$route}.",
-                'showTicketPolicy' => true,
-                'showRecommendation' => true,
-            ];
-        }
-
-        // 3. Aturan Kebijakan Tiket / Waiver 72A / Refund / Fee / Kompensasi / Meals
-        if (str_contains($lowerMsg, 'aturan') || str_contains($lowerMsg, 'policy') || str_contains($lowerMsg, 'kompensasi') || str_contains($lowerMsg, 'compensation') || str_contains($lowerMsg, 'meal') || str_contains($lowerMsg, 'makanan') || str_contains($lowerMsg, 'entitlement') || str_contains($lowerMsg, 'fee') || str_contains($lowerMsg, 'denda') || str_contains($lowerMsg, 'refund')) {
-            return [
-                'type' => 'policy_card',
-                'replyId' => "Berdasarkan analisis kebijakan tiket untuk penerbangan {$flightNo}, Anda berhak atas Waiver 72A (Bebas Biaya Perubahan) serta snack/meal voucher untuk keterlambatan > 2 jam.",
-                'replyEn' => "Based on policy analysis for flight {$flightNo}, you are eligible for Waiver 72A ($0 Rebooking Fee) and meal vouchers for delays over 2 hours.",
-                'showTicketPolicy' => true,
-                'showRecommendation' => false,
-            ];
-        }
-
-        // 4. Facility Check (Lounge / Terminal 3)
-        if (str_contains($lowerMsg, 'lounge') || str_contains($lowerMsg, 'plaza premium') || str_contains($lowerMsg, 'terminal')) {
-            return [
-                'type' => 'text',
-                'replyId' => "Sebagai penumpang penerbangan ini, Anda berhak mengakses Plaza Premium Lounge di Terminal 3 Bandara Soekarno-Hatta (di dekat Gate 6).",
-                'replyEn' => "As a passenger on this flight, you have complimentary access to the Plaza Premium Lounge at Terminal 3 (near Gate 6).",
-                'showTicketPolicy' => false,
-                'showRecommendation' => false,
-            ];
-        }
-
-        // 5. Baggage Allowance
-        if (str_contains($lowerMsg, 'bagasi') || str_contains($lowerMsg, 'baggage') || str_contains($lowerMsg, 'kabin') || str_contains($lowerMsg, 'cabin') || str_contains($lowerMsg, 'allowance')) {
-            return [
-                'type' => 'text',
-                'replyId' => "Batas bagasi terdaftar untuk tiket Anda adalah 30 kg, ditambah 1 bagasi kabin maksimal 7 kg.",
-                'replyEn' => "Checked baggage allowance for your ticket is 30 kg, plus 1 cabin baggage up to 7 kg.",
-                'showTicketPolicy' => false,
-                'showRecommendation' => false,
-            ];
-        }
-
-        // 6. Rebook confirm
-        if (str_contains($lowerMsg, 'pindah') || str_contains($lowerMsg, 'rebook') || str_contains($lowerMsg, 'ganti') || str_contains($lowerMsg, 'confirm')) {
-            return [
-                'type' => 'success_card',
-                'replyId' => "Permintaan rebooking untuk penerbangan {$flightNo} berhasil diproses via GDS Atlas.",
-                'replyEn' => "Rebooking request for flight {$flightNo} has been successfully processed via GDS Atlas.",
-                'showTicketPolicy' => false,
-                'showRecommendation' => true,
-            ];
-        }
-
-        return [
-            'type' => 'text',
-            'replyId' => "Pesan diterima. Saya memantau penerbangan {$flightNo} ({$route}) dengan status: {$status}. Ada yang bisa saya bantu?",
-            'replyEn' => "Message received. I am tracking flight {$flightNo} ({$route}) with status: {$status}. How can I assist you?",
-            'showTicketPolicy' => false,
-            'showRecommendation' => false,
-        ];
     }
 
     /**

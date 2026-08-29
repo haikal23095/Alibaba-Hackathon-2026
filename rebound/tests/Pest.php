@@ -48,3 +48,43 @@ function something()
 {
     // ..
 }
+
+// id: Helper lintas file tes — user uji untuk alur PNR/chat.
+// en: Cross-file test helper — test user for the PNR/chat flows.
+function pnrUser(): \App\Models\User
+{
+    return \App\Models\User::create([
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => 'password',
+    ]);
+}
+
+// id: Mesin simulasi AI sudah dihapus — helper ini memalsukan endpoint chat Qwen lewat
+//     Http::fake() dengan API key uji sehingga tes jalur AI deterministik tanpa panggilan nyata.
+// en: The AI simulation engine has been removed — this helper fakes the Qwen chat endpoint via
+//     Http::fake() with a test API key so AI-path tests stay deterministic without real calls.
+function fakeQwenChat(): void
+{
+    config([
+        'services.qwen.api_key' => 'testing',
+        'services.qwen.endpoint' => 'https://qwen.test/chat/completions',
+        'services.qwen.model' => 'qwen-test',
+    ]);
+
+    \Illuminate\Support\Facades\Http::fake([
+        'qwen.test/*' => \Illuminate\Support\Facades\Http::response([
+            'choices' => [[
+                'message' => [
+                    'content' => json_encode([
+                        'type' => 'text',
+                        'replyId' => 'Balasan uji coba.',
+                        'replyEn' => 'Test reply.',
+                        'showTicketPolicy' => false,
+                        'showRecommendation' => false,
+                    ]),
+                ],
+            ]],
+        ]),
+    ]);
+}

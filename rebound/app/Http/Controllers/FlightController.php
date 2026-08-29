@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\AgentChatSession;
 use App\Models\MockGdsBooking;
 use App\Models\Notification;
+use App\Models\Rebooking;
 use App\Models\UserPnr;
 
 class FlightController extends Controller
@@ -130,6 +131,42 @@ class FlightController extends Controller
                     'status' => $booking?->status ?? 'active',
                     'cabin_class' => $booking?->cabin_class,
                 ],
+            ],
+        ], 200);
+    }
+
+    /**
+     * id: Simpan hasil rebooking user — menggantikan state localStorage frontend dengan baris tabel
+     *     rebookings, satu baris per user + PNR (updateOrCreate). Objek penerbangan alternatif yang
+     *     dipilih disimpan utuh sebagai JSON sehingga status rebooked pulih dari database, bukan lokal.
+     * en: Persist the user's rebooking result — replaces the frontend localStorage state with a row in
+     *     the rebookings table, one row per user + PNR (updateOrCreate). The chosen alternative flight
+     *     object is stored whole as JSON so the rebooked state is restored from the database, not locally.
+     */
+    public function rebook(Request $request)
+    {
+        $request->validate([
+            'pnr' => 'required|string|max:10',
+            'alternative' => 'required|array',
+            'alternative.flightNumber' => 'required|string|max:12',
+        ]);
+
+        $user = $request->user();
+        // id: Normalisasi kode PNR (huruf besar, tanpa tanda hubung/spasi) — pola sama dengan verify()
+        // en: Normalize the PNR code (uppercase, no dashes/spaces) — same pattern as verify()
+        $pnrCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $request->input('pnr')));
+
+        $rebooking = Rebooking::updateOrCreate(
+            ['user_id' => $user->id, 'pnr_code' => $pnrCode],
+            ['alternative_flight' => $request->input('alternative')]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'pnr_code' => $rebooking->pnr_code,
+                'alternative_flight' => $rebooking->alternative_flight,
+                'rebooked_at' => $rebooking->updated_at->toIso8601String(),
             ],
         ], 200);
     }
