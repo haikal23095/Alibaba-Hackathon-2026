@@ -18,6 +18,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#-overview)
+- [Why Rebound](#-why-rebound)
 - [Tech Stack & Dependencies](#-tech-stack--dependencies)
 - [Key Features & System Architecture](#-key-features--system-architecture)
 - [Prerequisites](#-prerequisites)
@@ -34,11 +35,26 @@
 
 **Rebound Application** is the core web client and backend API gateway powering the Rebound Agentic AI platform. 
 
-While conventional Online Travel Agencies (OTAs) focus on the **pre-booking** purchase funnel, Rebound operates entirely in the **post-booking** domain. It acts as an autonomous assistant for passengers facing:
+While conventional Online Travel Agencies (OTAs) focus on the **pre-booking** purchase funnel, Rebound operates entirely in the **post-booking** domain. It acts as an explainable recovery agent for passengers facing:
 1. **Flight Disruptions** (delays, weather cancellations, gate changes).
 2. **Self-Service Schedule Changes** with policy validation and automated fare rule enforcement.
 
 The web application features a responsive 3-column dashboard UI built with Laravel Blade, Alpine.js, and Tailwind CSS, backed by a RESTful Laravel backend providing PNR authentication, chat state management, GDS simulation, and Sanctum API security.
+
+---
+
+## 💡 Why Rebound
+
+When disruption happens, travellers do not need another flight-search tool—they need a clear recovery decision. Rebound combines the passenger's booking context, disruption status, ticket policy, and available alternatives to recommend the best next step and explain why it was chosen.
+
+Rebound is designed around **human-in-the-loop travel recovery**:
+
+1. The agent verifies the passenger's PNR and gathers the relevant booking context.
+2. It explains the disruption, eligibility, waiver policy, and recommended alternatives.
+3. The traveller reviews the proposed itinerary, price impact, and rationale.
+4. Only after the traveller explicitly confirms does the system execute the rebooking workflow.
+
+The current implementation uses a clearly labelled **sandbox GDS dataset** and simulated rebooking outcome. This allows the full recovery workflow to be safely demonstrated without purchasing a real ticket or performing an irreversible airline transaction. In production, the sandbox adapter can be replaced by authorised Atlas flight APIs and airline servicing integrations.
 
 ---
 
@@ -85,8 +101,9 @@ The web application features a responsive 3-column dashboard UI built with Larav
 
 1. **Mandatory PNR Gate**: Flight monitoring and AI interaction are locked until a valid PNR (Booking Reference) is input or scanned.
 2. **Persistent AI Chat History**: Agent interactions are saved per PNR in `agent_chat_sessions` and `chat_messages` so sessions persist smoothly across refreshes.
-3. **Policy-Aware AI Reasoning**: Agent backend validates fare rules before issuing rebooking options or waiver codes (`Rule 72A`).
-4. **Instant Boarding Pass & QR Generation**: Generates digital vouchers and GDS-compliant barcodes inside the dashboard.
+3. **Explainable, Policy-Aware Recommendations**: The agent validates fare rules and presents the reason, waiver eligibility, and price impact behind each rebooking option.
+4. **Traveller Approval Gate**: The traveller must review and explicitly confirm the selected option before the simulated rebooking workflow is completed.
+5. **Sandbox Rebooking & Digital Documents**: The demo uses sandbox data to safely issue a simulated rebooking outcome, digital voucher, boarding pass, and QR/barcode.
 
 ---
 
