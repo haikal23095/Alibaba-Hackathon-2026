@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-[#F8FAFC]">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>REBOUND - AI Flight Assistant & Smart Rebooking</title>
-    
+
     <!-- Favicon: REBOUND Aviation Emblem -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="alternate icon" href="/favicon.svg">
@@ -13,12 +14,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="REBOUND">
-    <meta name="description" content="REBOUND - Enterprise AI Passenger Assistant for Instant Flight Disruption Monitoring, Ticket Policy Waiver Verification & One-Click GDS Rebooking.">
+    <meta name="description"
+        content="REBOUND - Enterprise AI Passenger Assistant for Instant Flight Disruption Monitoring, Ticket Policy Waiver Verification & One-Click GDS Rebooking.">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- Font Awesome Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -60,20 +64,25 @@
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
     <style>
-        [x-cloak] { display: none !important; }
-        
+        [x-cloak] {
+            display: none !important;
+        }
+
         /* Custom scrollbars */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
         }
+
         ::-webkit-scrollbar-track {
             background: transparent;
         }
+
         ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 9999px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
@@ -83,11 +92,13 @@
         }
     </style>
 </head>
-<body class="h-full font-sans antialiased text-[#1E293B] bg-[#F8FAFC] flex flex-col selection:bg-brand-500 selection:text-white"
-      x-data="reboundApp()">
+
+<body
+    class="h-full font-sans antialiased text-[#1E293B] bg-[#F8FAFC] flex flex-col selection:bg-brand-500 selection:text-white"
+    x-data="reboundApp()">
 
     {{-- id: Navbar atas — berisi logo, navigasi utama, pemilih bahasa, notifikasi, profil user
-         en: Top navbar — contains logo, main navigation, language picker, notifications, user profile --}}
+    en: Top navbar — contains logo, main navigation, language picker, notifications, user profile --}}
     <!-- Top App Bar Navigation -->
     @include('sections.navbar')
 
@@ -97,12 +108,12 @@
     </main>
 
     {{-- id: Modal wajib input PNR pertama kali + scanner barcode tiket fisik. Lihat #BACKEND di file ini.
-         en: Mandatory first-time PNR input modal + physical ticket barcode scanner. See #BACKEND in file. --}}
+    en: Mandatory first-time PNR input modal + physical ticket barcode scanner. See #BACKEND in file. --}}
     <!-- First-Time Access PNR Onboarding & Physical Ticket Scanner Modal -->
     @include('sections.pnr-onboarding-modal')
 
     {{-- id: Modal daftar perjalanan — data perjalanan harus dari database bookings user
-         en: Trips list modal — trip data must come from user's bookings database --}}
+    en: Trips list modal — trip data must come from user's bookings database --}}
     <!-- Modal My Trips -->
     @include('sections.my-trips-modal')
 
@@ -110,41 +121,40 @@
     @include('sections.help-modal')
 
     {{-- id: Modal QR code besar untuk di-scan di bandara — QR harus dari data booking real
-         en: Large QR code modal for airport scanning — QR must be from real booking data --}}
+    en: Large QR code modal for airport scanning — QR must be from real booking data --}}
     <!-- Scannable Large QR Code Modal -->
     @include('sections.qr-modal')
 
     {{-- id: Modal pilih wallet digital — integrasi Apple PassKit + Google Wallet API dari server
-         en: Digital wallet selector modal — Apple PassKit + Google Wallet API integration from server --}}
+    en: Digital wallet selector modal — Apple PassKit + Google Wallet API integration from server --}}
     <!-- Universal Mobile Wallet Selector Modal (Android Google Wallet + iOS Apple Wallet) -->
     @include('sections.wallet-modal')
 
     {{-- id: Modal animasi proses rebooking multi-step — di produksi setiap step memanggil API backend
-         en: Multi-step rebooking process animation modal — in production each step calls backend API --}}
+    en: Multi-step rebooking process animation modal — in production each step calls backend API --}}
     <!-- Rebooking Process Animation Modal -->
     @include('sections.rebooking-modal')
 
     {{-- id: Modal daftar penerbangan alternatif dari GDS Atlas — data harus dari GDS API real-time
-         en: GDS Atlas alternative flights list modal — data must come from real-time GDS API --}}
+    en: GDS Atlas alternative flights list modal — data must come from real-time GDS API --}}
     <!-- Multi-Flight GDS Atlas Alternative Schedules Modal -->
     @include('sections.flight-options-modal')
 
     {{-- id: Bottom navigation bar khusus mobile — UI-only, tidak ada data backend
-         en: Mobile-only bottom navigation bar — UI-only, no backend data needed --}}
+    en: Mobile-only bottom navigation bar — UI-only, no backend data needed --}}
     <!-- Smartphone Bottom Navigation Bar -->
     @include('sections.mobile-bottom-nav')
 
     <!-- Global Toast Notification Banner -->
-    <div x-show="toast.visible" 
-         x-cloak
-         x-transition:enter="transition ease-out duration-300 transform"
-         x-transition:enter-start="opacity-0 translate-y-3 scale-95"
-         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-         x-transition:leave="transition ease-in duration-200 transform"
-         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-         x-transition:leave-end="opacity-0 translate-y-3 scale-95"
-         class="fixed bottom-5 right-5 z-50 max-w-sm bg-slate-950 text-white p-3 rounded-lg shadow-lg border border-slate-700 flex items-center gap-2.5 text-xs">
-        <div class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+    <div x-show="toast.visible" x-cloak x-transition:enter="transition ease-out duration-300 transform"
+        x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition ease-in duration-200 transform"
+        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+        x-transition:leave-end="opacity-0 translate-y-3 scale-95"
+        class="fixed bottom-5 right-5 z-50 max-w-sm bg-slate-950 text-white p-3 rounded-lg shadow-lg border border-slate-700 flex items-center gap-2.5 text-xs">
+        <div
+            class="w-6 h-6 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
             <i class="fa-solid fa-circle-check text-xs"></i>
         </div>
         <div class="flex-1 font-medium leading-snug" x-text="toast.message"></div>
@@ -154,14 +164,16 @@
     </div>
 
     {{-- id: Modal "Tambah Tiket Baru PNR" lama dihapus — fungsinya sudah digantikan oleh sections/pnr-onboarding-modal
-         (flag showAddTicketModal yang sama memicu keduanya, sehingga dua overlay menumpuk dan tampilan highlight rusak).
-         en: Removed legacy "Add New PNR Ticket" modal — its function is replaced by sections/pnr-onboarding-modal
-         (the same showAddTicketModal flag drove both, stacking two overlays and breaking the highlight look). --}}
+    (flag showAddTicketModal yang sama memicu keduanya, sehingga dua overlay menumpuk dan tampilan highlight rusak).
+    en: Removed legacy "Add New PNR Ticket" modal — its function is replaced by sections/pnr-onboarding-modal
+    (the same showAddTicketModal flag drove both, stacking two overlays and breaking the highlight look). --}}
 
     <!-- Alpine.js Main State Management -->
     {{-- #BACKEND
-         id: Seluruh state management ini adalah fungsi utama aplikasi REBOUND. Setiap property dan function di bawah ini perlu disambungkan ke backend Laravel + database + API eksternal.
-         en: This entire state management is the core of REBOUND app. Every property and function below needs to be connected to Laravel backend + database + external APIs. --}}
+    id: Seluruh state management ini adalah fungsi utama aplikasi REBOUND. Setiap property dan function di bawah ini
+    perlu disambungkan ke backend Laravel + database + API eksternal.
+    en: This entire state management is the core of REBOUND app. Every property and function below needs to be connected
+    to Laravel backend + database + external APIs. --}}
     <script>
         // id: reboundApp() — Fungsi utama Alpine.js yang mengelola seluruh state frontend. Backend harus menyediakan data awal via Blade props atau API endpoint.
         // en: reboundApp() — Main Alpine.js function managing all frontend state. Backend must provide initial data via Blade props or API endpoints.
@@ -355,82 +367,12 @@
                 },
 
                 // #BACKEND GDS Atlas Multi-Flight Inventory
-                // id: Daftar penerbangan alternatif ini statis — harus diambil dari GDS Atlas API atau Amadeus/Sabre berdasarkan rute & tanggal penerbangan yang terganggu
-                // en: This alternative flights list is static — must be fetched from GDS Atlas API or Amadeus/Sabre based on disrupted flight route & date
-                alternativeFlightsList: [
-                    {
-                        flightNumber: 'GA830',
-                        airline: 'Garuda Indonesia',
-                        airlineCode: 'GA',
-                        aircraft: 'Boeing 737-800',
-                        gate: '4A',
-                        fromCity: 'Jakarta',
-                        fromCode: 'CGK',
-                        toCity: 'Singapura',
-                        toCityEn: 'Singapore',
-                        toCode: 'SIN',
-                        depTime: '12:40',
-                        arrTime: '15:25',
-                        duration: '2j 45m',
-                        durationEn: '2h 45m',
-                        seatsAvailable: 12,
-                        isRecommended: true,
-                    },
-                    {
-                        flightNumber: 'SQ638',
-                        airline: 'Singapore Airlines',
-                        airlineCode: 'SQ',
-                        aircraft: 'Airbus A350-900',
-                        gate: '2A',
-                        fromCity: 'Jakarta',
-                        fromCode: 'CGK',
-                        toCity: 'Singapura',
-                        toCityEn: 'Singapore',
-                        toCode: 'SIN',
-                        depTime: '14:15',
-                        arrTime: '17:05',
-                        duration: '2j 50m',
-                        durationEn: '2h 50m',
-                        seatsAvailable: 8,
-                        isRecommended: false,
-                    },
-                    {
-                        flightNumber: 'QG524',
-                        airline: 'Citilink (Garuda Group)',
-                        airlineCode: 'QG',
-                        aircraft: 'Airbus A320neo',
-                        gate: '5B',
-                        fromCity: 'Jakarta',
-                        fromCode: 'CGK',
-                        toCity: 'Singapura',
-                        toCityEn: 'Singapore',
-                        toCode: 'SIN',
-                        depTime: '16:30',
-                        arrTime: '19:15',
-                        duration: '2j 45m',
-                        durationEn: '2h 45m',
-                        seatsAvailable: 15,
-                        isRecommended: false,
-                    },
-                    {
-                        flightNumber: 'ID7153',
-                        airline: 'Batik Air',
-                        airlineCode: 'ID',
-                        aircraft: 'Boeing 737-800',
-                        gate: '1C',
-                        fromCity: 'Jakarta',
-                        fromCode: 'CGK',
-                        toCity: 'Singapura',
-                        toCityEn: 'Singapore',
-                        toCode: 'SIN',
-                        depTime: '18:00',
-                        arrTime: '20:50',
-                        duration: '2j 50m',
-                        durationEn: '2h 50m',
-                        seatsAvailable: 6,
-                        isRecommended: false,
-                    }
-                ],
+                // id: Daftar penerbangan alternatif kini dipasok dari backend per PNR aktif, bukan hardcode di Alpine.
+                // en: Alternative flight inventory is now supplied by backend per active PNR, not hardcoded in Alpine.
+                alternativeFlightsByPnr: @json($alternativeFlightsByPnr ?? []),
+                get alternativeFlightsList() {
+                    return this.alternativeFlightsByPnr?.[this.selectedTicketId] || [];
+                },
 
                 // id: translations — Katalog terjemahan dari file lang/id/messages.php dan lang/en/messages.php Laravel
                 // en: translations — Translation catalogue from Laravel's lang/id/messages.php and lang/en/messages.php files
@@ -496,59 +438,33 @@
                                     displayValue: false,
                                     margin: 0
                                 });
-                            } catch(e) {}
+                            } catch (e) { }
                         }
                     });
                 },
-                
+
                 // #BACKEND Authenticated Current User
                 // id: Data user sudah dari Auth — tapi 'role' & 'passenger' title masih statis, harus diambil dari tabel users/profiles di database
                 // en: User data is from Auth — but 'role' & 'passenger' title are still static, must be fetched from users/profiles table in database
-                currentUser: { 
-                    id: {{ Auth::id() ?? 1 }}, 
-                    name: @json(Auth::user()->name ?? 'Zakaria MP'), 
-                    initials: @json(strtoupper(substr(Auth::user()->name ?? 'ZM', 0, 2))), 
-                    email: @json(Auth::user()->email ?? 'zakariamp@rebound.ai'), 
+                currentUser: {
+                    id: {{ Auth::id() ?? 1 }},
+                    name: @json(Auth::user()->name ?? 'Zakaria MP'),
+                    initials: @json(strtoupper(substr(Auth::user()->name ?? 'ZM', 0, 2))),
+                    email: @json(Auth::user()->email ?? 'zakariamp@rebound.ai'),
                     // passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (MR)'), // #BACKEND id: title MR/MRS harus dari DB | en: MR/MRS title from DB
                     // role: 'Frequent Flyer Platinum' // #BACKEND id: role/tier loyalty dari database | en: loyalty tier from database
                     passenger: @json((Auth::user()->name ?? 'Zakaria MP') . ' (' . (Auth::user()->title ?? 'MR') . ')'),
                     role: @json(Auth::user()->loyalty_tier ?? 'Frequent Flyer Platinum')
                 },
 
-                // #BACKEND Flight Data State — SELURUH DATA STATIS
-                // id: Semua data penerbangan (nomor, maskapai, rute, waktu, status, delay) harus diambil dari database bookings/flights via PNR lookup + GDS real-time API
-                // en: All flight data (number, airline, route, times, status, delay) must be fetched from bookings/flights database via PNR lookup + GDS real-time API
-                flight: {
-                    original: {
-                        flightNumber: 'GA826', // #BACKEND dari DB: bookings.flight_number
-                        airline: 'Garuda Indonesia', // #BACKEND dari DB: airlines.name
-                        airlineCode: 'GA', // #BACKEND dari DB: airlines.iata_code
-                        fromCity: 'Jakarta', // #BACKEND dari DB: airports.city
-                        fromCode: 'CGK', // #BACKEND dari DB: airports.iata_code
-                        toCity: 'Singapura', // #BACKEND dari DB: airports.city (localized)
-                        toCityEn: 'Singapore',
-                        toCode: 'SIN', // #BACKEND dari DB: airports.iata_code
-                        date: '30 Nov', // #BACKEND dari DB: bookings.departure_date
-                        dateFullId: '30 November, 09.30', // #BACKEND format dari departure_date
-                        dateFullEn: '30 Nov, 09:30 AM',
-                        depTime: '09:30', // #BACKEND dari DB: flights.scheduled_departure
-                        arrTime: '12:20', // #BACKEND dari DB: flights.scheduled_arrival
-                        aircraft: 'Airbus A330-300', // #BACKEND dari DB: flights.aircraft_type
-                        class: 'Economy (V)', // #BACKEND dari DB: bookings.cabin_class + fare_basis
-                        statusId: 'Terlambat +4j 25m', // #BACKEND dari GDS real-time API: flight status
-                        statusEn: 'Delayed +4h 25m',
-                        delayTime: '30 Nov, 09.30 PM', // #BACKEND dari GDS API: estimated_departure
-                        delayCauseId: 'Cuaca buruk', // #BACKEND dari GDS API: delay_reason
-                        delayCauseEn: 'Bad weather',
-                        changeAllowedId: 'Ya', // #BACKEND dari DB: fare_rules.change_allowed
-                        changeAllowedEn: 'Yes',
-                        feeAmountId: 'Rp750.000', // #BACKEND dari DB: fare_rules.change_fee
-                        feeAmountEn: '$50',
-                        fareDiffId: 'Berlaku', // #BACKEND dari DB: fare_rules.fare_diff_policy
-                        fareDiffEn: 'Applies',
-                    },
+                // #BACKEND Flight Data State — now sourced from backend-provided booking profiles
+                // id: Data penerbangan utama diambil dari mock GDS/backend untuk PNR aktif, bukan hardcode di Alpine.
+                // en: The primary flight data comes from backend/mock GDS booking profiles for the active PNR, not hardcoded in Alpine.
+                flightProfiles: @json($flightProfiles ?? []),
+                flight: @json($activeFlightProfile) ?? {
+                    original: {},
                     alternative: {
-                        flightNumber: 'GA830', // #BACKEND dari GDS Atlas API: recommended alternative
+                        flightNumber: 'GA830',
                         airline: 'Garuda Indonesia',
                         airlineCode: 'GA',
                         aircraft: 'Boeing 737-800',
@@ -562,9 +478,10 @@
                         arrTime: '15:25',
                         duration: '2j 45m',
                         durationEn: '2h 45m',
-                        departureCountdownId: 'Berangkat 45 menit lagi', // #BACKEND hitung real-time dari server time
+                        departureCountdownId: 'Berangkat 45 menit lagi',
                         departureCountdownEn: 'Departs in 45 min',
-                    }
+                    },
+                    flightStatus: 'delayed'
                 },
 
                 // #BACKEND Chat Messages History
@@ -573,10 +490,34 @@
                 messages: [],
 
                 // #BACKEND Select Ticket from Left Sidebar
-                // id: Fungsi selectTicket() masih hardcode data per tiket — harus fetch dari API /api/bookings/{pnr} untuk mendapatkan data real-time
-                // en: selectTicket() still hardcodes data per ticket — must fetch from API /api/bookings/{pnr} to get real-time data
+                // id: Fungsi selectTicket() sekarang memprioritaskan profil backend per PNR, lalu fallback demo bila data belum ada.
+                // en: selectTicket() now prioritizes backend booking profiles per PNR, then falls back to demo cases when no data exists.
                 selectTicket(id) {
                     this.selectedTicketId = id;
+                    const backendProfile = this.flightProfiles?.[id] || null;
+                    if (backendProfile && backendProfile.original) {
+                        this.flight = {
+                            ...this.flight,
+                            ...backendProfile,
+                            original: { ...backendProfile.original },
+                            alternative: { ...this.flight.alternative, ...(backendProfile.alternative || {}) },
+                        };
+                        this.flightStatus = backendProfile.flightStatus || this.flightStatus;
+                        this.messages = [
+                            {
+                                sender: 'ai',
+                                time: backendProfile.original.depTime || '09:35',
+                                type: backendProfile.flightStatus === 'delayed' ? 'greeting' : 'text',
+                                textId: `Halo ${this.currentUser.name}! Saya sedang memantau penerbangan ${backendProfile.original.flightNumber} Anda (${backendProfile.original.fromCode} → ${backendProfile.original.toCode}). Status saat ini ${backendProfile.original.statusId || 'terverifikasi'}.`,
+                                textEn: `Hello ${this.currentUser.name}! I am monitoring your flight ${backendProfile.original.flightNumber} (${backendProfile.original.fromCode} → ${backendProfile.original.toCode}). Current status is ${backendProfile.original.statusEn || 'verified'}.`,
+                                showRecommendation: backendProfile.flightStatus === 'delayed',
+                            }
+                        ];
+
+                        this.loadChatHistory();
+                        return;
+                    }
+
                     // id: Case GA826 — Data penerbangan Garuda Indonesia yang terganggu (delayed). Semua data hardcode di bawah ini harus diambil dari API /api/bookings/GA826
                     // en: Case GA826 — Disrupted Garuda Indonesia flight data (delayed). All hardcoded data below must be fetched from API /api/bookings/GA826
                     if (id === 'GA826') {
@@ -595,8 +536,8 @@
                                 showRecommendation: true,
                             }
                         ];
-                    // id: Case SQ951 — Tiket Singapore Airlines Business Class (on-time). Data hardcode harus dari API /api/bookings/SQ951
-                    // en: Case SQ951 — Singapore Airlines Business Class ticket (on-time). Hardcoded data must be from API /api/bookings/SQ951
+                        // id: Case SQ951 — Tiket Singapore Airlines Business Class (on-time). Data hardcode harus dari API /api/bookings/SQ951
+                        // en: Case SQ951 — Singapore Airlines Business Class ticket (on-time). Hardcoded data must be from API /api/bookings/SQ951
                     } else if (id === 'SQ951') {
                         this.flightStatus = 'on-time';
                         this.flight.original = {
@@ -641,8 +582,8 @@
                                 showRecommendation: false,
                             }
                         ];
-                    // id: Case SQ638 — Tiket Singapore Airlines ke Tokyo Haneda (on-time). Data hardcode harus dari API /api/bookings/SQ638
-                    // en: Case SQ638 — Singapore Airlines ticket to Tokyo Haneda (on-time). Hardcoded data must be from API /api/bookings/SQ638
+                        // id: Case SQ638 — Tiket Singapore Airlines ke Tokyo Haneda (on-time). Data hardcode harus dari API /api/bookings/SQ638
+                        // en: Case SQ638 — Singapore Airlines ticket to Tokyo Haneda (on-time). Hardcoded data must be from API /api/bookings/SQ638
                     } else if (id === 'SQ638') {
                         this.flightStatus = 'on-time';
                         this.flight.original = {
@@ -687,8 +628,8 @@
                                 showRecommendation: false,
                             }
                         ];
-                    // id: Case default — Trip yang sudah selesai. Tampilkan pesan bahwa perjalanan telah selesai.
-                    // en: Case default — Completed trips. Show message that the trip has been completed.
+                        // id: Case default — Trip yang sudah selesai. Tampilkan pesan bahwa perjalanan telah selesai.
+                        // en: Case default — Completed trips. Show message that the trip has been completed.
                     } else {
                         this.flightStatus = 'on-time';
                         this.messages = [
@@ -767,7 +708,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         }
-                    }).catch(() => {});
+                    }).catch(() => { });
                 },
 
                 // id: notifTimeAgo(iso) — Waktu relatif notifikasi (Baru saja / Xm lalu / Xj lalu / Xh lalu)
@@ -809,7 +750,7 @@
                     try {
                         localStorage.setItem('rebound_lang', l);
                         await fetch('/lang/' + l, { headers: { 'Accept': 'application/json' } });
-                    } catch(e) {}
+                    } catch (e) { }
                     this.langOpen = false;
                 },
 
@@ -852,7 +793,7 @@
                             alternative: this.flight.alternative,
                             savedAt: new Date().toISOString(),
                         }));
-                    } catch (e) {}
+                    } catch (e) { }
                 },
 
                 // id: restoreRebookedState() — Dipanggil di init() setelah selectTicket(); jika ada state rebooking tersimpan
@@ -868,7 +809,7 @@
                             this.flight.alternative = saved.alternative;
                             this.flightStatus = 'rebooked';
                         }
-                    } catch (e) {}
+                    } catch (e) { }
                 },
 
                 // #BACKEND Rebook action with multi-step telemetry dispatch animation
@@ -1264,4 +1205,5 @@
         }
     </script>
 </body>
+
 </html>

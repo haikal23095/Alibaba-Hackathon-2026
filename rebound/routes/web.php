@@ -39,14 +39,14 @@ use App\Models\MockGdsBooking;
 // id: Dashboard Utama & Asisten Penerbangan REBOUND (Wajib Login)
 // en: Protected Dashboard & REBOUND Flight Assistant (Authentication Required)
 Route::middleware('auth')->group(function () {
-    
+
     Route::get('/', function () {
         $user = auth()->user();
-        
+
         // id: Utamakan PNR dari sesi chat AI paling terbaru (berdasarkan updated_at)
         // en: Prioritize PNR from the user's most recent AI chat session (based on updated_at)
         $latestChatSession = AgentChatSession::where('user_id', $user->id)->latest('updated_at')->first();
-        
+
         // Ambil PNR berstatus 'active' milik user sebagai cadangan jika belum ada chat
         $activePnr = $user->pnrs()->where('status', 'active')->first();
 
@@ -62,13 +62,203 @@ Route::middleware('auth')->group(function () {
             ->latest()
             ->get(['pnr_code', 'last_name', 'status']);
 
+        $airlineFromFlightNumber = static function (?string $flightNumber): string {
+            $prefix = strtoupper(substr((string) $flightNumber, 0, 2));
+
+            return match ($prefix) {
+                'GA' => 'Garuda Indonesia',
+                'SQ' => 'Singapore Airlines',
+                'QZ' => 'Citilink',
+                'JT' => 'Lion Air',
+                'ID' => 'Batik Air',
+                default => 'Rebound Air',
+            };
+        };
+
+        $airportName = static function (?string $code): array {
+            return match (strtoupper((string) $code)) {
+                'CGK' => ['Jakarta', 'Jakarta'],
+                'SIN' => ['Singapura', 'Singapore'],
+                'HND' => ['Tokyo', 'Tokyo'],
+                'KUL' => ['Kuala Lumpur', 'Kuala Lumpur'],
+                'DPS' => ['Denpasar', 'Denpasar'],
+                'SUB' => ['Surabaya', 'Surabaya'],
+                default => ['Unknown', 'Unknown'],
+            };
+        };
+
+        $statusLabel = static function (?string $status): array {
+            return match ($status) {
+                'delayed' => ['delayed', 'Terlambat +4j 25m', 'Delayed +4h 25m'],
+                'cancelled' => ['cancelled', 'Dibatalkan', 'Cancelled'],
+                'flown', 'completed' => ['on-time', 'Selesai', 'Completed'],
+                default => ['on-time', 'Tepat Waktu', 'On Time'],
+            };
+        };
+
+        $buildFlightProfile = static function (?MockGdsBooking $booking) use ($airlineFromFlightNumber, $airportName, $statusLabel): ?array {
+            if (!$booking) {
+                return null;
+            }
+
+            [$fromCityId, $fromCityEn] = $airportName($booking->from_code);
+            [$toCityId, $toCityEn] = $airportName($booking->to_code);
+            [$flightStatus, $statusId, $statusEn] = $statusLabel($booking->status);
+            $departure = $booking->departure_time;
+            $departureDateId = $departure?->format('d M Y, H.i') ?? '';
+            $departureDateEn = $departure?->format('d M Y, H:i') ?? '';
+
+            return [
+                'original' => [
+                    'flightNumber' => $booking->flight_number,
+                    'airline' => $airlineFromFlightNumber($booking->flight_number),
+                    'airlineCode' => strtoupper(substr((string) $booking->flight_number, 0, 2)),
+                    'fromCity' => $fromCityId,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'date' => $departure?->format('d M') ?? '',
+                    'dateFullId' => $departureDateId,
+                    'dateFullEn' => $departureDateEn,
+                    'depTime' => $departure?->format('H:i') ?? '',
+                    'arrTime' => $departure?->addHours(2)->addMinutes(45)?->format('H:i') ?? '',
+                    'aircraft' => 'TBA',
+                    'class' => $booking->cabin_class,
+                    'statusId' => $statusId,
+                    'statusEn' => $statusEn,
+                    'delayTime' => $departure?->format('d M Y, H:i') ?? '',
+                    'delayCauseId' => $booking->status === 'delayed' ? 'Cuaca buruk' : 'Normal',
+                    'delayCauseEn' => $booking->status === 'delayed' ? 'Bad weather' : 'Normal',
+                    'changeAllowedId' => $booking->status === 'delayed' ? 'Ya' : 'Ya',
+                    'changeAllowedEn' => $booking->status === 'delayed' ? 'Yes' : 'Yes',
+                    'feeAmountId' => $booking->status === 'delayed' ? 'Rp0' : 'Rp0',
+                    'feeAmountEn' => $booking->status === 'delayed' ? '$0' : '$0',
+                    'fareDiffId' => 'Berlaku',
+                    'fareDiffEn' => 'Applies',
+                ],
+                'flightStatus' => $flightStatus,
+            ];
+        };
+
+        $buildAlternativeFlights = static function (?MockGdsBooking $booking) use ($airlineFromFlightNumber, $airportName): array {
+            if (!$booking) {
+                return [];
+            }
+
+            [$fromCityId, $fromCityEn] = $airportName($booking->from_code);
+            [$toCityId, $toCityEn] = $airportName($booking->to_code);
+
+            return [
+                [
+                    'flightNumber' => 'GA830',
+                    'airline' => 'Garuda Indonesia',
+                    'airlineCode' => 'GA',
+                    'aircraft' => 'Boeing 737-800',
+                    'gate' => '4A',
+                    'fromCity' => $fromCityId,
+                    'fromCityEn' => $fromCityEn,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'depTime' => '12:40',
+                    'arrTime' => '15:25',
+                    'duration' => '2j 45m',
+                    'durationEn' => '2h 45m',
+                    'seatsAvailable' => 12,
+                    'departureCountdownId' => 'Berangkat 45 menit lagi',
+                    'departureCountdownEn' => 'Departs in 45 min',
+                    'isRecommended' => true,
+                ],
+                [
+                    'flightNumber' => 'SQ638',
+                    'airline' => 'Singapore Airlines',
+                    'airlineCode' => 'SQ',
+                    'aircraft' => 'Airbus A350-900',
+                    'gate' => '2A',
+                    'fromCity' => $fromCityId,
+                    'fromCityEn' => $fromCityEn,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'depTime' => '14:15',
+                    'arrTime' => '17:05',
+                    'duration' => '2j 50m',
+                    'durationEn' => '2h 50m',
+                    'seatsAvailable' => 8,
+                    'departureCountdownId' => 'Berangkat 2 jam lagi',
+                    'departureCountdownEn' => 'Departs in 2 hours',
+                    'isRecommended' => false,
+                ],
+                [
+                    'flightNumber' => 'QG524',
+                    'airline' => 'Citilink (Garuda Group)',
+                    'airlineCode' => 'QG',
+                    'aircraft' => 'Airbus A320neo',
+                    'gate' => '5B',
+                    'fromCity' => $fromCityId,
+                    'fromCityEn' => $fromCityEn,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'depTime' => '16:30',
+                    'arrTime' => '19:15',
+                    'duration' => '2j 45m',
+                    'durationEn' => '2h 45m',
+                    'seatsAvailable' => 15,
+                    'departureCountdownId' => 'Berangkat sore ini',
+                    'departureCountdownEn' => 'Departs this evening',
+                    'isRecommended' => false,
+                ],
+                [
+                    'flightNumber' => 'ID7153',
+                    'airline' => 'Batik Air',
+                    'airlineCode' => 'ID',
+                    'aircraft' => 'Boeing 737-800',
+                    'gate' => '1C',
+                    'fromCity' => $fromCityId,
+                    'fromCityEn' => $fromCityEn,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'depTime' => '18:00',
+                    'arrTime' => '20:50',
+                    'duration' => '2j 50m',
+                    'durationEn' => '2h 50m',
+                    'seatsAvailable' => 6,
+                    'departureCountdownId' => 'Berangkat malam ini',
+                    'departureCountdownEn' => 'Departs tonight',
+                    'isRecommended' => false,
+                ],
+            ];
+        };
+
+        $bookingsByPnr = MockGdsBooking::whereIn(
+            'pnr_code',
+            $userTickets->pluck('pnr_code')->filter()->values()->all()
+        )->get()->keyBy('pnr_code');
+
+        $activeFlightProfile = $buildFlightProfile($activePnrCode ? ($bookingsByPnr[$activePnrCode] ?? null) : null);
+        $flightProfiles = $bookingsByPnr->mapWithKeys(function (MockGdsBooking $booking) use ($buildFlightProfile) {
+            return [$booking->pnr_code => $buildFlightProfile($booking)];
+        })->all();
+        $alternativeFlightsByPnr = $bookingsByPnr->mapWithKeys(function (MockGdsBooking $booking) use ($buildAlternativeFlights) {
+            return [$booking->pnr_code => $buildAlternativeFlights($booking)];
+        })->all();
+
 
         // id: Sesi chat AI Agent milik pengguna dari database (agent_chat_sessions + chat_messages + mock_gds_bookings)
         // en: User's AI Agent chat sessions from database (agent_chat_sessions + chat_messages + mock_gds_bookings)
         $chatSessions = AgentChatSession::where('user_id', $user->id)
-            ->with(['messages' => function ($query) {
-                $query->latest('sent_at');
-            }])
+            ->with([
+                'messages' => function ($query) {
+                    $query->latest('sent_at');
+                }
+            ])
             ->latest('updated_at')
             ->get()
             ->map(function ($session) {
@@ -99,7 +289,7 @@ Route::middleware('auth')->group(function () {
             ->latest()
             ->limit(20)
             ->get()
-            ->map(fn ($notification) => [
+            ->map(fn($notification) => [
                 'id' => $notification->id,
                 'pnr_code' => $notification->pnr_code,
                 'type' => $notification->type,
@@ -114,6 +304,9 @@ Route::middleware('auth')->group(function () {
         return view('welcome', [
             'hasSetupPnr' => $activePnrCode !== null,
             'activePnrCode' => $activePnrCode,
+            'activeFlightProfile' => $activeFlightProfile,
+            'flightProfiles' => $flightProfiles,
+            'alternativeFlightsByPnr' => $alternativeFlightsByPnr,
             'userTickets' => $userTickets,
             'chatSessions' => $chatSessions,
             'notifications' => $notifications,
