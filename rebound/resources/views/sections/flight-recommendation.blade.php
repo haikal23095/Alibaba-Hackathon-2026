@@ -40,7 +40,7 @@
         <div class="text-left">
             <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight" x-text="flight.alternative?.depTime || '-'"></div>
             <div class="text-[9.5px] text-slate-500 font-medium"
-                 x-text="(flight.alternative?.fromCity || '') + ' (' + (flight.alternative?.fromCode || '-') + ')'"></div>
+                 x-text="((lang === 'id' ? (flight.alternative?.fromCity || flight.alternative?.fromCityEn) : (flight.alternative?.fromCityEn || flight.alternative?.fromCity)) || '') + ' (' + (flight.alternative?.fromCode || '-') + ')'"></div>
         </div>
 
         <!-- Transit & Duration Line -->

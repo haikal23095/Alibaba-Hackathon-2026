@@ -4,8 +4,17 @@
      #BACKEND en: User profile data (name, initials, email) from currentUser already from Auth. Notifications now come from the real notifications table. --}}
 <header class="h-[64px] sm:h-[56px] pt-2.5 sm:pt-0 bg-white border-b border-[#E2E8F0] px-3.5 sm:px-5 md:px-6 flex items-center justify-between z-30 shrink-0 select-none relative">
     
-    <!-- LEFT: Logo -->
+    <!-- LEFT: Hamburger (mobile) + Logo -->
     <div class="flex items-center gap-2">
+        {{-- id: Tombol hamburger khusus mobile (<lg) untuk membuka panel sidebar kiri (daftar tiket PNR)
+             sebagai overlay penuh via mobileTab = 'tickets'. Di desktop sidebar sudah tampil permanen.
+             en: Mobile-only (<lg) hamburger button that opens the left sidebar (PNR ticket list) as a
+             full overlay via mobileTab = 'tickets'. Desktop keeps the sidebar permanently visible. --}}
+        <button @click="mobileTab = 'tickets'"
+                class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                :title="lang === 'id' ? 'Buka Daftar Tiket' : 'Open Ticket List'">
+            <i class="fa-solid fa-bars text-sm"></i>
+        </button>
         <a href="/" class="hover:opacity-90 transition">
             <x-logo size="sm" />
         </a>

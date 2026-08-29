@@ -920,7 +920,15 @@
                     } catch (e) { }
                     const saved = this.rebookingsByPnr?.[this.selectedTicketId];
                     if (saved && saved.flightNumber) {
-                        this.flight.alternative = saved;
+                        // id: Baris rebookings versi lama bisa tersimpan tanpa field bandara/durasi.
+                        //     Gabungkan dengan jadwal GDSAtlas untuk nomor penerbangan yang sama agar
+                        //     kartu rebooked selalu tampil lengkap (bandara asal/tujuan, jam, durasi).
+                        // en: Legacy rebooking rows may have been saved without airport/duration fields.
+                        //     Merge with the GDS Atlas schedule for the same flight number so the rebooked
+                        //     card always renders complete (origin/destination airports, times, duration).
+                        const gdsFlight = (this.alternativeFlightsByPnr?.[this.selectedTicketId] || [])
+                            .find(f => f.flightNumber === saved.flightNumber) || {};
+                        this.flight.alternative = { ...gdsFlight, ...saved };
                         this.flightStatus = 'rebooked';
                     }
                 },

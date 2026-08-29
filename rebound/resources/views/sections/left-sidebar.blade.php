@@ -21,7 +21,7 @@
                  en: Mobile-only close button — the tickets panel is now a full overlay (fixed); this
                  returns the user to the chat tab. Desktop collapse keeps the chevron-left below. --}}
             <button @click="mobileTab = 'assistant'"
-                    class="lg:hidden w-9 h-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition cursor-pointer shrink-0 shadow-2xs"
+                    class="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition cursor-pointer shrink-0 shadow-2xs"
                     :title="lang === 'id' ? 'Kembali ke Chat' : 'Back to Chat'">
                 <i class="fa-solid fa-xmark text-xs"></i>
             </button>
