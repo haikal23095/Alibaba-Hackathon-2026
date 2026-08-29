@@ -15,7 +15,7 @@
         
         {{-- #BACKEND id: departureCountdown harus dihitung dari timestamp server | en: departureCountdown computed from server timestamp --}}
         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold rounded"
-              x-text="lang === 'id' ? flight.alternative.departureCountdownId : flight.alternative.departureCountdownEn"></span>
+              x-text="lang === 'id' ? (flight.alternative?.departureCountdownId || 'Menunggu jadwal') : (flight.alternative?.departureCountdownEn || 'Awaiting schedule')"></span>
     </div>
 
     {{-- id: Informasi maskapai, nomor penerbangan, dan rute
@@ -26,9 +26,9 @@
             <i class="fa-solid fa-plane-departure text-[10px]"></i>
         </div>
         <div>
-            <h4 class="font-bold text-slate-900 text-xs" x-text="flight.alternative.airline"></h4>
+            <h4 class="font-bold text-slate-900 text-xs" x-text="flight.alternative?.airline || ''"></h4>
             <p class="text-[10px] text-slate-500 font-medium"
-               x-text="flight.alternative.flightNumber + ' • ' + flight.alternative.fromCode + ' → ' + flight.alternative.toCode"></p>
+               x-text="(flight.alternative?.flightNumber || '-') + ' • ' + (flight.alternative?.fromCode || '-') + ' → ' + (flight.alternative?.toCode || '-')"></p>
         </div>
     </div>
 
@@ -38,9 +38,9 @@
     <div class="py-1.5 px-2 bg-slate-50 rounded-md border border-slate-100 mb-2 flex items-center justify-between">
         <!-- Departure City -->
         <div class="text-left">
-            <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight" x-text="flight.alternative.depTime"></div>
+            <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight" x-text="flight.alternative?.depTime || '-'"></div>
             <div class="text-[9.5px] text-slate-500 font-medium"
-                 x-text="flight.alternative.fromCity + ' (' + flight.alternative.fromCode + ')'"></div>
+                 x-text="(flight.alternative?.fromCity || '') + ' (' + (flight.alternative?.fromCode || '-') + ')'"></div>
         </div>
 
         <!-- Transit & Duration Line -->
@@ -57,14 +57,14 @@
             </div>
 
             <span class="text-[9px] text-slate-500 font-medium mt-0.5"
-                  x-text="lang === 'id' ? flight.alternative.duration : flight.alternative.durationEn"></span>
+                  x-text="lang === 'id' ? (flight.alternative?.duration || '-') : (flight.alternative?.durationEn || '-')"></span>
         </div>
 
         <!-- Arrival City -->
         <div class="text-right">
-            <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight" x-text="flight.alternative.arrTime"></div>
+            <div class="text-sm sm:text-base font-bold text-slate-900 tracking-tight" x-text="flight.alternative?.arrTime || '-'"></div>
             <div class="text-[9.5px] text-slate-500 font-medium"
-                 x-text="(lang === 'id' ? flight.alternative.toCity : flight.alternative.toCityEn) + ' (' + flight.alternative.toCode + ')'"></div>
+                 x-text="((lang === 'id' ? flight.alternative?.toCity : flight.alternative?.toCityEn) || '') + ' (' + (flight.alternative?.toCode || '-') + ')'"></div>
         </div>
     </div>
 
@@ -96,7 +96,7 @@
         <button @click="rebookFlight()"
                 class="w-full sm:flex-1 py-1.5 px-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-[11px] rounded-md shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer">
             <i class="fa-solid fa-plane-circle-check text-[10px]"></i>
-            <span x-text="lang === 'id' ? 'Pindah ke GA830' : 'Switch to GA830'"></span>
+            <span x-text="lang === 'id' ? ('Pindah ke ' + (flight.alternative?.flightNumber || '')) : ('Switch to ' + (flight.alternative?.flightNumber || ''))"></span>
         </button>
 
         <button @click="showFlightOptionsModal = true"

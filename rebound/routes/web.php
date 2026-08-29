@@ -98,51 +98,6 @@ Route::middleware('auth')->group(function () {
             };
         };
 
-        $buildFlightProfile = static function (?MockGdsBooking $booking) use ($airlineFromFlightNumber, $airportName, $statusLabel): ?array {
-            if (!$booking) {
-                return null;
-            }
-
-            [$fromCityId, $fromCityEn] = $airportName($booking->from_code);
-            [$toCityId, $toCityEn] = $airportName($booking->to_code);
-            [$flightStatus, $statusId, $statusEn] = $statusLabel($booking->status);
-            $departure = $booking->departure_time;
-            $departureDateId = $departure?->format('d M Y, H.i') ?? '';
-            $departureDateEn = $departure?->format('d M Y, H:i') ?? '';
-
-            return [
-                'original' => [
-                    'flightNumber' => $booking->flight_number,
-                    'airline' => $airlineFromFlightNumber($booking->flight_number),
-                    'airlineCode' => strtoupper(substr((string) $booking->flight_number, 0, 2)),
-                    'fromCity' => $fromCityId,
-                    'fromCode' => $booking->from_code,
-                    'toCity' => $toCityId,
-                    'toCityEn' => $toCityEn,
-                    'toCode' => $booking->to_code,
-                    'date' => $departure?->format('d M') ?? '',
-                    'dateFullId' => $departureDateId,
-                    'dateFullEn' => $departureDateEn,
-                    'depTime' => $departure?->format('H:i') ?? '',
-                    'arrTime' => $departure?->addHours(2)->addMinutes(45)?->format('H:i') ?? '',
-                    'aircraft' => 'TBA',
-                    'class' => $booking->cabin_class,
-                    'statusId' => $statusId,
-                    'statusEn' => $statusEn,
-                    'delayTime' => $departure?->format('d M Y, H:i') ?? '',
-                    'delayCauseId' => $booking->status === 'delayed' ? 'Cuaca buruk' : 'Normal',
-                    'delayCauseEn' => $booking->status === 'delayed' ? 'Bad weather' : 'Normal',
-                    'changeAllowedId' => $booking->status === 'delayed' ? 'Ya' : 'Ya',
-                    'changeAllowedEn' => $booking->status === 'delayed' ? 'Yes' : 'Yes',
-                    'feeAmountId' => $booking->status === 'delayed' ? 'Rp0' : 'Rp0',
-                    'feeAmountEn' => $booking->status === 'delayed' ? '$0' : '$0',
-                    'fareDiffId' => 'Berlaku',
-                    'fareDiffEn' => 'Applies',
-                ],
-                'flightStatus' => $flightStatus,
-            ];
-        };
-
         $buildAlternativeFlights = static function (?MockGdsBooking $booking) use ($airlineFromFlightNumber, $airportName): array {
             if (!$booking) {
                 return [];
@@ -236,6 +191,58 @@ Route::middleware('auth')->group(function () {
                     'departureCountdownEn' => 'Departs tonight',
                     'isRecommended' => false,
                 ],
+            ];
+        };
+
+        // id: Profil penerbangan per PNR — mencakup 'alternative' (penerbangan alternatif
+        //     rekomendasi) agar kartu rekomendasi rebook di chat tidak merender "undefined"
+        //     pada PNR nyata; bentuknya sama dengan objek flight.alternative di Alpine.
+        // en: Per-PNR flight profile — includes 'alternative' (the recommended alternative
+        //     flight) so the chat's rebook recommendation card never renders "undefined" for
+        //     real PNRs; shape matches the Alpine flight.alternative object.
+        $buildFlightProfile = static function (?MockGdsBooking $booking) use ($airlineFromFlightNumber, $airportName, $statusLabel, $buildAlternativeFlights): ?array {
+            if (!$booking) {
+                return null;
+            }
+
+            [$fromCityId, $fromCityEn] = $airportName($booking->from_code);
+            [$toCityId, $toCityEn] = $airportName($booking->to_code);
+            [$flightStatus, $statusId, $statusEn] = $statusLabel($booking->status);
+            $departure = $booking->departure_time;
+            $departureDateId = $departure?->format('d M Y, H.i') ?? '';
+            $departureDateEn = $departure?->format('d M Y, H:i') ?? '';
+
+            return [
+                'original' => [
+                    'flightNumber' => $booking->flight_number,
+                    'airline' => $airlineFromFlightNumber($booking->flight_number),
+                    'airlineCode' => strtoupper(substr((string) $booking->flight_number, 0, 2)),
+                    'fromCity' => $fromCityId,
+                    'fromCode' => $booking->from_code,
+                    'toCity' => $toCityId,
+                    'toCityEn' => $toCityEn,
+                    'toCode' => $booking->to_code,
+                    'date' => $departure?->format('d M') ?? '',
+                    'dateFullId' => $departureDateId,
+                    'dateFullEn' => $departureDateEn,
+                    'depTime' => $departure?->format('H:i') ?? '',
+                    'arrTime' => $departure?->addHours(2)->addMinutes(45)?->format('H:i') ?? '',
+                    'aircraft' => 'TBA',
+                    'class' => $booking->cabin_class,
+                    'statusId' => $statusId,
+                    'statusEn' => $statusEn,
+                    'delayTime' => $departure?->format('d M Y, H:i') ?? '',
+                    'delayCauseId' => $booking->status === 'delayed' ? 'Cuaca buruk' : 'Normal',
+                    'delayCauseEn' => $booking->status === 'delayed' ? 'Bad weather' : 'Normal',
+                    'changeAllowedId' => $booking->status === 'delayed' ? 'Ya' : 'Ya',
+                    'changeAllowedEn' => $booking->status === 'delayed' ? 'Yes' : 'Yes',
+                    'feeAmountId' => $booking->status === 'delayed' ? 'Rp0' : 'Rp0',
+                    'feeAmountEn' => $booking->status === 'delayed' ? '$0' : '$0',
+                    'fareDiffId' => 'Berlaku',
+                    'fareDiffEn' => 'Applies',
+                ],
+                'alternative' => $buildAlternativeFlights($booking)[0] ?? null,
+                'flightStatus' => $flightStatus,
             ];
         };
 

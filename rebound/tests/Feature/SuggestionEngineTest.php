@@ -77,6 +77,30 @@ test('dashboard melewatkan saran lapis-1 per PNR mengikuti status GDS', function
         });
 });
 
+// id: Regresi "undefined • undefined → undefined" — profil dashboard wajib memuat alternatif
+//     rekomendasi lengkap sehingga kartu rekomendasi rebook tidak merender field kosong.
+// en: Regression for "undefined • undefined → undefined" — the dashboard profile must carry a
+//     complete recommended alternative so the rebook recommendation card never renders empty fields.
+test('profil penerbangan dashboard memuat alternatif rekomendasi lengkap', function () {
+    $user = pnrUser();
+    suggestionBooking('delayed');
+    activateSuggestionPnr($user);
+
+    $this->actingAs($user)
+        ->get('/')
+        ->assertOk()
+        ->assertViewHas('flightProfiles', function ($profiles) {
+            $profile = $profiles['QZ502'] ?? null;
+            $alternative = $profile['alternative'] ?? null;
+
+            return is_array($alternative)
+                && ($alternative['flightNumber'] ?? '') !== ''
+                && ($alternative['fromCode'] ?? '') === 'CGK'
+                && ($alternative['toCode'] ?? '') === 'DPS'
+                && ($profile['original']['flightNumber'] ?? '') === 'QZ 502';
+        });
+});
+
 test('saran lapis-1 tiket on_time tidak menawarkan rebooking', function () {
     $user = pnrUser();
     suggestionBooking('on_time');
