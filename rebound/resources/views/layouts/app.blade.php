@@ -551,6 +551,13 @@
                 // en: selectTicket() now prioritizes backend booking profiles per PNR, then falls back to demo cases when no data exists.
                 selectTicket(id) {
                     this.selectedTicketId = id;
+                    // id: Di layar mobile (<1024px), memilih tiket dari panel "Tiket PNR" otomatis kembali ke
+                    //     tab chat agar percakapan tiket terpilih langsung terlihat (panel tiket adalah overlay penuh).
+                    // en: On mobile (<1024px), picking a ticket from the "PNR Tickets" panel automatically returns
+                    //     to the chat tab so the selected ticket's conversation is shown at once (tickets panel is a full overlay).
+                    if (window.matchMedia && !window.matchMedia('(min-width: 1024px)').matches) {
+                        this.mobileTab = 'assistant';
+                    }
                     const backendProfile = this.flightProfiles?.[id] || null;
                     if (backendProfile && backendProfile.original) {
                         this.flight = {

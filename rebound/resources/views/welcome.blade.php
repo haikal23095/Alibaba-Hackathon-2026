@@ -8,10 +8,14 @@
 @section('content')
 <div class="flex-1 flex w-full h-full overflow-hidden relative">
     
-    {{-- id: 1. Sidebar Kiri (Riwayat & Daftar Tiket) — responsif dengan mobileTab === 'tickets'
-         en: 1. Left Sidebar (History & Ticket List) — responsive via mobileTab === 'tickets' --}}
+    {{-- id: 1. Sidebar Kiri (Riwayat & Daftar Tiket) — responsif dengan mobileTab === 'tickets'.
+         Di mobile (<lg) panelnya difixed-kan agar selalu tampil andal sebagai overlay penuh,
+         tidak lagi bergantung pada tinggi/lebar flex container yang kadang kolaps (bug "kadang tidak tampil").
+         en: 1. Left Sidebar (History & Ticket List) — responsive via mobileTab === 'tickets'.
+         On mobile (<lg) the panel is fixed-positioned so it always renders reliably as a full overlay,
+         no longer depending on the flex container height/width which occasionally collapsed ("sometimes missing" bug). --}}
     <!-- 1. Left Sidebar: Riwayat Tiket -->
-    <div :class="mobileTab === 'tickets' ? 'block w-full' : (leftSidebarOpen ? 'hidden lg:block' : 'hidden')" class="h-full">
+    <div :class="mobileTab === 'tickets' ? 'fixed inset-0 z-40 lg:static lg:z-auto lg:block lg:w-auto' : (leftSidebarOpen ? 'hidden lg:block' : 'hidden')" class="h-full">
         @include('sections.left-sidebar')
     </div>
 
