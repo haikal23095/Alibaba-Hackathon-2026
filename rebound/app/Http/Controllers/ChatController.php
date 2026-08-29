@@ -225,7 +225,9 @@ PROMPT;
 
                 $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
-                $response = Http::timeout(12)
+                // id: Timeout 45 detik — model thinking Qwen bisa lambat pada prompt besar; di bawah itu berisiko fallback ke simulasi
+                // en: 45s timeout — Qwen thinking models can be slow on large prompts; less risks falling back to simulation
+                $response = Http::timeout(45)
                     ->withHeaders([
                         'Authorization' => 'Bearer ' . trim($apiKey),
                         'Content-Type' => 'application/json',

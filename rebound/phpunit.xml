@@ -32,5 +32,10 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- id: Paksa fallback simulasi LLM saat test agar tidak memanggil API Qwen asli (hemat token & deterministik)
+             en: Force LLM simulation fallback during tests so the real Qwen API is never called (token-free & deterministic) -->
+        <env name="QWEN_API_KEY" value=""/>
+        <env name="DASHSCOPE_API_KEY" value=""/>
+        <env name="QODER_API_KEY" value=""/>
     </php>
 </phpunit>

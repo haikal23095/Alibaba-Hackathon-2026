@@ -22,6 +22,14 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    // id: Qwen LLM (Alibaba Cloud Model Studio / Bailian) untuk balasan chat AI agent
+    // en: Qwen LLM (Alibaba Cloud Model Studio / Bailian) for AI agent chat replies
+    'qwen' => [
+        'api_key' => env('QWEN_API_KEY', env('DASHSCOPE_API_KEY')),
+        'endpoint' => env('QWEN_API_ENDPOINT'),
+        'model' => env('QWEN_MODEL_NAME', 'qwen-max'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
