@@ -95,6 +95,13 @@
                          if (Array.isArray(userTickets) && !userTickets.some(ticket => ticket.pnr_code === pnrCode)) {
                              userTickets.unshift({ pnr_code: pnrCode, last_name: passenger, status: 'active' });
                          }
+                         // id: Masukkan sesi chat baru (dibuat Laravel di tabel agent_chat_sessions) langsung ke
+                         //     sidebar kiri tanpa perlu refresh halaman
+                         // en: Insert the new chat session (created by Laravel in agent_chat_sessions) straight
+                         //     into the left sidebar without a page refresh
+                         if (Array.isArray(chatSessions) && data.data.session && !chatSessions.some(s => s.pnr_code === pnrCode)) {
+                             chatSessions.unshift(data.data.session);
+                         }
                          selectTicket(pnrCode);
                          showToast(lang === 'id' ? 'PNR valid menurut GDS Atlas! Tiket ' + pnrCode + ' aktif.' : 'PNR valid per GDS Atlas! Ticket ' + pnrCode + ' active.');
                      } else {

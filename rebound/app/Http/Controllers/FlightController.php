@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\AgentChatSession;
 use App\Models\MockGdsBooking;
 use App\Models\UserPnr;
 
@@ -96,6 +97,10 @@ class FlightController extends Controller
             ]
         );
 
+        // id: Tiket yang diaktifkan juga langsung punya sesi chat agar tampil di sidebar kiri
+        // en: The activated ticket also gets a chat session right away so it shows in the left sidebar
+        $this->ensureChatSession($user->id, $pnrCode);
+
         return response()->json([
             'status' => 'success',
             'message' => 'PNR berhasil diaktifkan.',
@@ -157,12 +162,34 @@ class FlightController extends Controller
             ['last_name' => $passenger, 'status' => 'active']
         );
 
+        // id: Tiket baru (Add Ticket PNR) langsung mendapat sesi chat AI Agent sehingga
+        //     muncul di sidebar kiri tanpa perlu menunggu pesan chat pertama.
+        // en: A newly added ticket (Add Ticket PNR) immediately gets an AI Agent chat session
+        //     so it appears in the left sidebar without waiting for the first chat message.
+        $session = $this->ensureChatSession($user->id, $pnrCode, $booking);
+
         return response()->json([
             'status' => 'success',
             'message' => 'PNR valid menurut GDS dan telah dicatat ke akun Anda.',
             'data' => [
                 'pnr_code' => $pnrCode,
                 'flight' => $this->bookingPayload($booking),
+                // id: Kartu sesi untuk sidebar kiri — bentuknya sama dengan hasil mapping route dashboard
+                // en: Session card for the left sidebar — same shape as the dashboard route mapping
+                'session' => [
+                    'id' => $session->id,
+                    'pnr_code' => $session->pnr_code,
+                    'context_summary' => $session->context_summary,
+                    'last_message' => 'Belum ada pesan.',
+                    'last_message_sender' => 'system',
+                    'last_message_time' => null,
+                    'flight_number' => $booking->flight_number,
+                    'from_code' => $booking->from_code,
+                    'to_code' => $booking->to_code,
+                    'departure_time' => $booking->departure_time?->format('d M Y') ?? '',
+                    'status' => $booking->status,
+                    'cabin_class' => $booking->cabin_class,
+                ],
             ],
         ], 200);
     }
@@ -177,6 +204,25 @@ class FlightController extends Controller
         $input = strtoupper($passenger);
 
         return $input === $stored || str_starts_with($input, $stored);
+    }
+
+    // id: Pastikan user punya satu sesi chat AI Agent per PNR (dipakai sidebar kiri).
+    //     Sesi yang sudah ada tidak ditimpa — riwayat chat tetap utuh.
+    // en: Ensure the user has exactly one AI Agent chat session per PNR (feeds the left sidebar).
+    //     Existing sessions are left untouched so chat history stays intact.
+    private function ensureChatSession(int $userId, string $pnrCode, ?MockGdsBooking $booking = null): AgentChatSession
+    {
+        $booking ??= MockGdsBooking::where('pnr_code', $pnrCode)->first();
+
+        $summary = $booking
+            ? 'Sesi obrolan penerbangan ' . $booking->flight_number . ' rute '
+                . $booking->from_code . ' ➔ ' . $booking->to_code . ' untuk PNR ' . $pnrCode
+            : 'Sesi obrolan penerbangan untuk PNR ' . $pnrCode;
+
+        return AgentChatSession::firstOrCreate(
+            ['user_id' => $userId, 'pnr_code' => $pnrCode],
+            ['context_summary' => $summary]
+        );
     }
 
     // id: Ubah booking Mock GDS menjadi payload penerbangan untuk frontend
