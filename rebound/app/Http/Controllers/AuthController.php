@@ -90,8 +90,15 @@ class AuthController extends Controller
                 ], 401);
             }
 
+            // Catat penyebab asli agar bisa didiagnosis dari log.
+            \Log::error('Firebase verifyIdToken gagal: '.$e->getMessage(), [
+                'exception' => get_class($e),
+            ]);
+
             return back()->withErrors([
-                'firebase' => 'Login gagal: token Firebase tidak valid atau kadaluarsa. Silakan coba lagi.',
+                'firebase' => config('app.debug')
+                    ? 'Login gagal: '.$e->getMessage()
+                    : 'Login gagal: token Firebase tidak valid atau kadaluarsa. Silakan coba lagi.',
             ]);
         }
     }
