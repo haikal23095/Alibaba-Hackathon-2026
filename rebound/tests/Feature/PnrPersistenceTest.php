@@ -1,6 +1,7 @@
 <?php
 
 // Memastikan aktivasi PNR & percakapan chat bertahan setelah refresh (tersimpan di database)
+use App\Models\ChatMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -97,4 +98,32 @@ test('dashboard mengirim daftar tiket asli user dari database ke modal', functio
     // en: Static test scenarios have been removed
     expect($html)->not->toContain('Uji Coba Tiket');
     expect($html)->not->toContain("submitPnr('SQ951')");
+});
+
+// id: Bentuk tersimpan kanonik dari balasan AI adalah BAHASA INGGRIS (replyEn),
+//     dan parameter bahasa UI (lang) divalidasi.
+// en: The canonical stored form of AI replies is ENGLISH (replyEn),
+//     and the UI language parameter (lang) is validated.
+
+test('balasan AI disimpan ke database dalam bahasa Inggris (replyEn)', function () {
+    $user = pnrUser();
+    $this->actingAs($user)->postJson('/api/pnr/activate', ['pnr_code' => 'GA826'])->assertOk();
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/chat/send', ['message' => 'Cek status penerbangan saya', 'pnr' => 'GA826', 'lang' => 'id'])
+        ->assertOk();
+
+    expect($response->json('replyEn'))->not->toBeEmpty();
+
+    $stored = ChatMessage::where('sender', 'agent')->latest('id')->first();
+    expect($stored->message_content)->toBe($response->json('replyEn'));
+});
+
+test('parameter bahasa UI selain id/en ditolak', function () {
+    $user = pnrUser();
+    $this->actingAs($user)->postJson('/api/pnr/activate', ['pnr_code' => 'GA826'])->assertOk();
+
+    $this->actingAs($user)
+        ->postJson('/api/chat/send', ['message' => 'halo', 'pnr' => 'GA826', 'lang' => 'fr'])
+        ->assertStatus(422);
 });

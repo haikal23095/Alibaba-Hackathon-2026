@@ -21,12 +21,16 @@ class ChatController extends Controller
         // 1. Validasi input dari frontend
         $request->validate([
             'message' => 'required|string',
-            'pnr' => 'required|string|max:10'
+            'pnr' => 'required|string|max:10',
+            // id: Bahasa UI yang sedang aktif (dikirim Alpine dari this.lang) — memaksa bahasa balasan AI
+            // en: The active UI language (sent by Alpine from this.lang) — forces the AI reply language
+            'lang' => 'nullable|in:id,en',
         ]);
 
         $user = $request->user();
         $userMessage = trim($request->input('message'));
         $pnrCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $request->input('pnr')));
+        $lang = $request->input('lang', 'id') === 'en' ? 'en' : 'id';
 
         try {
             // 2. Pastikan PNR milik pengguna yang sedang login
@@ -88,13 +92,17 @@ class ChatController extends Controller
                 ->toArray();
 
             // 7. HUBUNGI AI MODEL QWEN (Alibaba Cloud Model Studio / DashScope / Qoder API)
-            $aiData = $this->callQwenLLM($userMessage, $flightContext, $chatHistory);
+            $aiData = $this->callQwenLLM($userMessage, $flightContext, $chatHistory, $lang);
 
             // 8. Simpan balasan AI ke database
+            // id: Bentuk tersimpan kanonik adalah BAHASA INGGRIS (replyEn) sesuai keputusan produk;
+            //     frontend tetap memilih tampilan id/en dari kedua field respons saat pesan baru diterima.
+            // en: The canonical stored form is ENGLISH (replyEn) per product decision; the frontend
+            //     still picks the id/en display from both response fields when a fresh message arrives.
             ChatMessage::create([
                 'session_id' => $session->id,
                 'sender' => 'agent',
-                'message_content' => $aiData['replyId'],
+                'message_content' => $aiData['replyEn'] ?: $aiData['replyId'],
                 'dynamic_ui_payload' => [
                     'type' => $aiData['type'],
                     'showTicketPolicy' => $aiData['showTicketPolicy'] ?? false,
@@ -190,6 +198,7 @@ ATURAN WAJIB (STRICT RULES):
    - Gunakan "disruption_alert" jika menginformasikan delay parah, pembatalan, atau kompensasi krisis.
    - Gunakan "success_card" jika mengonfirmasi keberhasilan rebooking atau klaim voucher.
    - Gunakan "text" untuk pertanyaan umum, salam, atau info penerbangan standar.
+5. Bahasa: "replyId" HARUS selalu dalam Bahasa Indonesia dan "replyEn" HARUS selalu dalam Bahasa Inggris, terlepas dari bahasa apa pun yang dipakai pengguna saat bertanya. Jangan pernah mencampur bahasa atau mengikuti bahasa pertanyaan pengguna.
 PROMPT;
     }
 
@@ -197,7 +206,7 @@ PROMPT;
      * Mengirimkan HTTP Request ke Qwen API (Alibaba Cloud Model Studio / DashScope / Qoder API)
      * dengan fallback otomatis ke mesin simulasi agen jika API Key belum dikonfigurasi.
      */
-    private function callQwenLLM(string $userMessage, array $flightContext, array $chatHistory): array
+    private function callQwenLLM(string $userMessage, array $flightContext, array $chatHistory, string $lang = 'id'): array
     {
         $apiKey = config('services.qwen.api_key') 
             ?: env('QWEN_API_KEY', env('DASHSCOPE_API_KEY', env('QODER_API_KEY')));
@@ -216,7 +225,17 @@ PROMPT;
                     [
                         'role' => 'system', 
                         'content' => "DATA PENERBANGAN RESMI GDS ATLAS (flight_context):\n" . json_encode($flightContext, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-                    ]
+                    ],
+                    [
+                        // id: Paksa bahasa balasan mengikuti pengaturan bahasa aplikasi (this.lang di frontend),
+                        //     terlepas dari bahasa apa pun yang dipakai pengguna saat bertanya.
+                        // en: Force the reply language to follow the app language setting (frontend this.lang),
+                        //     regardless of whatever language the user writes their question in.
+                        'role' => 'system',
+                        'content' => $lang === 'en'
+                            ? 'The user\'s app language setting is ENGLISH. The visible reply shown to the user is "replyEn", so "replyEn" MUST be written in English even if the user asks their question in another language. Keep "replyId" in Bahasa Indonesia.'
+                            : 'Pengaturan bahasa aplikasi pengguna adalah BAHASA INDONESIA. Balasan yang ditampilkan ke pengguna adalah "replyId", jadi "replyId" HARUS ditulis dalam Bahasa Indonesia meskipun pengguna bertanya dalam bahasa lain. Tetap tulis "replyEn" dalam Bahasa Inggris.',
+                    ],
                 ];
 
                 foreach ($chatHistory as $prevMsg) {

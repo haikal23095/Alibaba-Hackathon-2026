@@ -13,6 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\UserPnr;
 use App\Models\AgentChatSession;
 use App\Models\CompensationVoucher;
+use App\Models\Notification as AppNotification;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['firebase_uid','name', 'email', 'password', 'avatar_url'])]
@@ -44,6 +45,16 @@ class User extends Authenticatable
     public function compensationVouchers(): HasMany
     {
         return $this->hasMany(CompensationVoucher::class);
+    }
+
+    // Relasi: Satu User bisa memiliki banyak notifikasi operasional (tabel notifications).
+    // Nama metode sengaja appNotifications() agar tidak menabrak notifications()
+    // bawaan trait Notifiable milik Laravel.
+    // en: A User can have many operational notifications (notifications table).
+    // Named appNotifications() to avoid clashing with Laravel's Notifiable trait notifications().
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(AppNotification::class);
     }
 
 

@@ -77,7 +77,7 @@
                     </div>
                     <div>
                         <div class="font-semibold" x-text="lang === 'id' ? 'Pengalihan Bagasi Otomatis' : 'Automatic Baggage Transfer'"></div>
-                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Tag bagasi #GA-489102 dialihkan ke GA830' : 'Bag tag #GA-489102 routed to GA830'"></div>
+                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Tag bagasi #GA-489102 dialihkan ke ' + flight.alternative.flightNumber : 'Bag tag #GA-489102 routed to ' + flight.alternative.flightNumber"></div>
                     </div>
                 </div>
                 <span x-show="rebookStep > 2" class="text-[9px] font-bold text-emerald-700 uppercase bg-emerald-100 px-1.5 py-0.2 rounded">OK</span>
@@ -94,8 +94,8 @@
                         <i :class="rebookStep > 3 ? 'fa-solid fa-check' : (rebookStep === 3 ? 'fa-solid fa-circle-notch' : 'fa-solid fa-3')"></i>
                     </div>
                     <div>
-                        <div class="font-semibold" x-text="lang === 'id' ? 'Penerbitan Boarding Pass GA830' : 'GA830 Boarding Pass Issuance'"></div>
-                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Kursi 14A (Jendela) • Gate 4A' : 'Seat 14A (Window) • Gate 4A'"></div>
+                        <div class="font-semibold" x-text="lang === 'id' ? 'Penerbitan Boarding Pass ' + flight.alternative.flightNumber : flight.alternative.flightNumber + ' Boarding Pass Issuance'"></div>
+                        <div class="text-[10px] text-slate-500" x-text="lang === 'id' ? 'Kursi 14A (Jendela) • Gate ' + (flight.alternative.gate || '4A') : 'Seat 14A (Window) • Gate ' + (flight.alternative.gate || '4A')"></div>
                     </div>
                 </div>
                 <span x-show="rebookStep > 3" class="text-[9px] font-bold text-emerald-700 uppercase bg-emerald-100 px-1.5 py-0.2 rounded">OK</span>

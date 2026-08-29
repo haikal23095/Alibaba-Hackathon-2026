@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\AgentChatSession;
 use App\Models\ChatMessage;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\UserPnr;
 use Illuminate\Database\Seeder;
@@ -213,6 +214,46 @@ class AgentChatSeeder extends Seeder
                     'sent_at' => $m['sent_at'],
                 ]);
             }
+        }
+
+        // 4. id: Notifikasi operasional demo untuk krisis GA826 milik User 1 — menggantikan tiga kartu
+        //    alert statis yang dulu di-hardcode di dropdown navbar. updateOrCreate per user+pnr+type
+        //    agar rerun seeder tidak menduplikasi.
+        //    en: Demo operational notifications for User 1's GA826 crisis — replace the three static
+        //    alert cards previously hardcoded in the navbar dropdown. updateOrCreate per user+pnr+type
+        //    keeps seeder reruns idempotent.
+        $notificationSeeds = [
+            [
+                'type' => 'delay',
+                'title_id' => 'Keterlambatan Penerbangan',
+                'title_en' => 'Flight Delay',
+                'message_id' => 'GA826 resmi ditunda +4 jam karena cuaca buruk. Opsi rebooking telah aktif.',
+                'message_en' => 'GA826 officially delayed +4 hours due to weather. Rebooking options activated.',
+                'created_at' => Carbon::now()->subMinutes(2),
+            ],
+            [
+                'type' => 'alternative',
+                'title_id' => 'Alternatif Tersedia',
+                'title_en' => 'Alternative Ready',
+                'message_id' => 'Garuda GA830 (Gate 4A) siap dialihkan bebas biaya (Waiver 72A).',
+                'message_en' => 'Garuda GA830 (Gate 4A) ready for zero-fee transfer (Waiver 72A).',
+                'created_at' => Carbon::now()->subMinutes(5),
+            ],
+            [
+                'type' => 'baggage',
+                'title_id' => 'Status Bagasi',
+                'title_en' => 'Baggage Telemetry',
+                'message_id' => 'Tag bagasi #GA-489102 tercatat di sistem Terminal 3 CGK.',
+                'message_en' => 'Baggage tag #GA-489102 verified in Terminal 3 CGK system.',
+                'created_at' => Carbon::now()->subMinutes(15),
+            ],
+        ];
+
+        foreach ($notificationSeeds as $seed) {
+            Notification::updateOrCreate(
+                ['user_id' => $user1->id, 'pnr_code' => 'GA826', 'type' => $seed['type']],
+                $seed
+            );
         }
     }
 }

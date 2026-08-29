@@ -15,8 +15,10 @@
                 <i class="fa-solid fa-plane text-sky-200"></i>
             </div>
             <div>
-                <h5 class="font-bold text-[11px] leading-tight" x-text="flightStatus === 'rebooked' ? 'Garuda Indonesia' : flight.original.airline"></h5>
-                <p class="text-[8px] text-sky-200/90 font-mono" x-text="flightStatus === 'rebooked' ? 'GA830 • B737-800' : (flight.original.flightNumber + ' • A330')"></p>
+                {{-- id: Header mengikuti activeFlight agar setelah rebooking menampilkan maskapai baru (mis. Batik Air ID7153), bukan Garuda lama
+                     en: Header follows activeFlight so after rebooking the new airline (e.g. Batik Air ID7153) is shown, not the old Garuda --}}
+                <h5 class="font-bold text-[11px] leading-tight" x-text="activeFlight.airline"></h5>
+                <p class="text-[8px] text-sky-200/90 font-mono" x-text="activeFlight.flightNumber + ' • ' + activeFlight.aircraft"></p>
             </div>
         </div>
 
@@ -34,8 +36,8 @@
         <div class="flex items-center justify-between pb-1 border-b border-slate-100">
             <div>
                 <span class="text-[7.5px] text-slate-400 font-bold uppercase block" x-text="lang === 'id' ? 'DARI' : 'FROM'"></span>
-                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.fromCode || 'CGK'"></span>
-                <span class="text-[8px] text-slate-500 block font-medium" x-text="(flight.original.fromCity || 'Jakarta') + ' (' + (flight.original.fromCode || 'CGK') + ')'"></span>
+                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="activeFlight.fromCode"></span>
+                <span class="text-[8px] text-slate-500 block font-medium" x-text="activeFlight.fromCity + ' (' + activeFlight.fromCode + ')'"></span>
             </div>
 
             <!-- Plane Route Icon -->
@@ -46,13 +48,13 @@
                     <i class="fa-solid fa-plane text-brand-600 text-[8px]"></i>
                     <div class="w-4 h-0.5 bg-slate-200"></div>
                 </div>
-                <span class="text-[7.5px] text-slate-400 font-mono" x-text="flight.original.duration || '1h 45m'"></span>
+                <span class="text-[7.5px] text-slate-400 font-mono" x-text="lang === 'id' ? activeFlight.duration : activeFlight.durationEn"></span>
             </div>
 
             <div class="text-right">
                 <span class="text-[7.5px] text-slate-400 font-bold uppercase block" x-text="lang === 'id' ? 'KE' : 'TO'"></span>
-                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="flight.original.toCode || 'SIN'"></span>
-                <span class="text-[8px] text-slate-500 block font-medium" x-text="(lang === 'id' ? (flight.original.toCity || 'Singapura') : (flight.original.toCityEn || flight.original.toCity || 'Singapore')) + ' (' + (flight.original.toCode || 'SIN') + ')'"></span>
+                <span class="text-xs font-black text-slate-900 tracking-tight" x-text="activeFlight.toCode"></span>
+                <span class="text-[8px] text-slate-500 block font-medium" x-text="(lang === 'id' ? activeFlight.toCity : activeFlight.toCityEn) + ' (' + activeFlight.toCode + ')'"></span>
             </div>
         </div>
 
@@ -63,22 +65,22 @@
             <!-- Gate -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'GATE' : 'GATE'"></span>
-                <span class="text-[10px] font-black text-brand-600" x-text="flightStatus === 'rebooked' ? '4A' : (flight.original.gate || '3B')"></span>
+                <span class="text-[10px] font-black text-brand-600" x-text="activeFlight.gate"></span>
             </div>
             <!-- Boarding Time -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'BOARDING' : 'BOARDING'"></span>
-                <span class="text-[9.5px] font-bold text-slate-900" x-text="flightStatus === 'rebooked' ? '12:00' : (flight.original.depTime || '08:50')"></span>
+                <span class="text-[9.5px] font-bold text-slate-900" x-text="activeFlight.boardingTime"></span>
             </div>
             <!-- Seat -->
             <div class="border-r border-slate-200/80 pr-0.5">
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block" x-text="lang === 'id' ? 'KURSI' : 'SEAT'"></span>
-                <span class="text-[9.5px] font-black text-slate-900" x-text="flight.original.seat || '14A'"></span>
+                <span class="text-[9.5px] font-black text-slate-900" x-text="activeFlight.seat"></span>
             </div>
             <!-- Zone -->
             <div>
                 <span class="text-[7.5px] font-bold text-slate-400 uppercase block">ZONE</span>
-                <span class="text-[9.5px] font-bold text-slate-900" x-text="flight.original.boardingGroup || '2'"></span>
+                <span class="text-[9.5px] font-bold text-slate-900" x-text="activeFlight.zone"></span>
             </div>
         </div>
 
@@ -144,7 +146,7 @@
 
             <!-- REAL SCANNABLE QR CODE (Clickable to Enlarge & Airport Scanner Ready) -->
             <div class="relative group cursor-pointer" @click="showQrModal = true" title="Scan QR / Klik untuk perbesar">
-                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' + encodeURIComponent('REBOUND PASS: PNR ' + selectedTicketId + ' | PAX ' + currentUser.passenger + ' | FLIGHT ' + (flightStatus === 'rebooked' ? 'GA830' : (flight.original.flightNumber || selectedTicketId)) + ' ' + (flight.original.fromCode || 'CGK') + '->' + (flight.original.toCode || 'SIN') + ' | GATE: ' + (flightStatus === 'rebooked' ? '4A' : '3B') + ' | SEAT 14A | STATUS: CONFIRMED')"
+                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=0&data=' + encodeURIComponent('REBOUND PASS: PNR ' + selectedTicketId + ' | PAX ' + currentUser.passenger + ' | FLIGHT ' + activeFlight.flightNumber + ' ' + activeFlight.fromCode + '->' + activeFlight.toCode + ' | GATE: ' + activeFlight.gate + ' | SEAT ' + activeFlight.seat + ' | STATUS: CONFIRMED')"
                      alt="Scannable QR Code"
                      class="w-6.5 h-6.5 p-0.5 bg-white rounded border border-slate-300 shadow-2xs hover:scale-110 transition duration-150 object-contain">
             </div>

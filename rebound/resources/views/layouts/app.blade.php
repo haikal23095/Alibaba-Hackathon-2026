@@ -200,9 +200,22 @@
                 // SESUDAH:
                 hasSetupPnr: {{ isset($hasSetupPnr) && $hasSetupPnr ? 'true' : 'false' }},
 
-                // #BACKEND id: hasUnreadNotif — Notifikasi belum dibaca, harus dari database notifications table
-                // #BACKEND en: hasUnreadNotif — Unread notifications, must come from notifications database table
-                hasUnreadNotif: true,
+                // id: notifications — notifikasi operasional asli milik user dari tabel notifications
+                //     (dikirim route dashboard), dirender dropdown navbar menggantikan kartu alert statis.
+                // en: notifications — the user's real operational notifications from the notifications table
+                //     (sent by the dashboard route), rendered in the navbar dropdown instead of static alert cards.
+                notifications: @json($notifications ?? []),
+
+                // id: unreadNotifCount & hasUnreadNotif — dihitung langsung dari array notifications,
+                //     sehingga badge lonceng & label "Baru" selalu sinkron dengan database.
+                // en: unreadNotifCount & hasUnreadNotif — computed straight from the notifications array,
+                //     so the bell badge & "New" label always stay in sync with the database.
+                get unreadNotifCount() {
+                    return this.notifications.filter(n => !n.is_read).length;
+                },
+                get hasUnreadNotif() {
+                    return this.unreadNotifCount > 0;
+                },
 
                 // id: State untuk loading indicator download PDF & Wallet Pass
                 // en: Loading state for PDF & Wallet Pass download indicators
@@ -253,6 +266,54 @@
                     );
                 },
 
+                // id: min40 — Helper hitung waktu boarding (40 menit sebelum keberangkatan) dari depTime 'HH:MM'
+                // en: min40 — Helper to compute boarding time (40 minutes before departure) from 'HH:MM' depTime
+                min40(t) {
+                    const m = /^([0-9]{1,2}):([0-9]{2})$/.exec(t || '');
+                    if (!m) return t || '';
+                    let total = parseInt(m[1], 10) * 60 + parseInt(m[2], 10) - 40;
+                    if (total < 0) total += 1440;
+                    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+                },
+
+                // id: activeFlight — SATU sumber data penerbangan yang sedang aktif ditampilkan (overview, receipts,
+                //     boarding pass, QR, barcode, download). Otomatis beralih ke penerbangan hasil rebooking
+                //     (mis. Batik Air ID7153) begitu flightStatus 'rebooked', sehingga UI tidak lagi menampilkan
+                //     data lama Garuda setelah rebooking.
+                // en: activeFlight — the SINGLE source of the flight currently on display (overview, receipts,
+                //     boarding pass, QR, barcode, downloads). Automatically switches to the rebooked flight
+                //     (e.g. Batik Air ID7153) once flightStatus is 'rebooked', so the UI no longer shows the
+                //     old Garuda data after rebooking.
+                get activeFlight() {
+                    const rebooked = this.flightStatus === 'rebooked';
+                    const f = rebooked ? this.flight.alternative : this.flight.original;
+                    return {
+                        flightNumber: f.flightNumber || this.selectedTicketId || 'GA826',
+                        airline: f.airline || 'Garuda Indonesia',
+                        airlineCode: f.airlineCode || 'GA',
+                        aircraft: f.aircraft || (rebooked ? 'Boeing 737-800' : 'Airbus A330-300'),
+                        gate: f.gate || (rebooked ? '4A' : '3B'),
+                        depTime: f.depTime || '09:30',
+                        arrTime: f.arrTime || '12:20',
+                        // id: Waktu boarding = 40 menit sebelum keberangkatan (standar tampilan aplikasi)
+                        // en: Boarding time = 40 minutes before departure (app display standard)
+                        boardingTime: this.min40(f.depTime || '09:30'),
+                        date: f.date || '30 Nov',
+                        class: f.class || 'Economy (V)',
+                        duration: f.duration || '2j 45m',
+                        durationEn: f.durationEn || '1h 45m',
+                        fromCode: f.fromCode || 'CGK',
+                        toCode: f.toCode || 'SIN',
+                        fromCity: f.fromCity || 'Jakarta',
+                        toCity: f.toCity || 'Singapura',
+                        toCityEn: f.toCityEn || 'Singapore',
+                        terminal: f.terminal || '3',
+                        seat: f.seat || '14A',
+                        zone: f.boardingGroup || '2',
+                        pnr: this.selectedTicketId || 'GA826',
+                    };
+                },
+
                 // id: chatInput — Teks input chat user yang sedang diketik
                 // en: chatInput — User's current chat input text being typed
                 chatInput: '',
@@ -268,7 +329,7 @@
                     if (this.selectedTicketId === 'GA826') {
                         if (this.flightStatus === 'rebooked') {
                             return [
-                                { id: 'Lihat e-Boarding Pass baru penerbangan GA830', en: 'View new GA830 e-Boarding Pass' },
+                                { id: 'Lihat e-Boarding Pass baru penerbangan ' + this.flight.alternative.flightNumber, en: 'View new ' + this.flight.alternative.flightNumber + ' e-Boarding Pass' },
                                 { id: 'Cek status pengalihan bagasi #GA-489102', en: 'Check baggage transfer status #GA-489102' }
                             ];
                         }
@@ -405,6 +466,10 @@
                         this.selectTicket(this.selectedTicketId);
                     }
 
+                    // id: Pulihkan status rebooking dari localStorage agar hasil pindah jadwal bertahan setelah refresh
+                    // en: Restore rebooking state from localStorage so the schedule change survives a page refresh
+                    this.restoreRebookedState();
+
                 },
 
                 // id: renderBarcode() — Generate barcode Code128 yang bisa di-scan menggunakan library JsBarcode. Data barcode diambil dari nama penumpang + nomor penerbangan.
@@ -415,9 +480,9 @@
                     this.$nextTick(() => {
                         const barcodeEl = document.getElementById('live-boarding-barcode');
                         if (barcodeEl && typeof JsBarcode !== 'undefined') {
-                            // #BACKEND id: flightNo masih hardcode GA830/GA826, harus dari flight.original.flightNumber
-                            // #BACKEND en: flightNo is still hardcoded GA830/GA826, must be from flight.original.flightNumber
-                            const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
+                            // id: flightNo diambil dari activeFlight agar mengikuti penerbangan hasil rebooking
+                            // en: flightNo comes from activeFlight so it follows the rebooked flight
+                            const flightNo = this.activeFlight.flightNumber;
                             const paxName = (this.currentUser && this.currentUser.name) ? this.currentUser.name.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase() : 'ZAKARIA';
                             // id: Format barcode standar IATA BCBP (Bar Coded Boarding Pass)
                             // en: Standard IATA BCBP (Bar Coded Boarding Pass) format
@@ -468,6 +533,7 @@
                         dateFullEn: '30 Nov, 09:30 AM',
                         depTime: '09:30', // #BACKEND dari DB: flights.scheduled_departure
                         arrTime: '12:20', // #BACKEND dari DB: flights.scheduled_arrival
+                        aircraft: 'Airbus A330-300', // #BACKEND dari DB: flights.aircraft_type
                         class: 'Economy (V)', // #BACKEND dari DB: bookings.cabin_class + fare_basis
                         statusId: 'Terlambat +4j 25m', // #BACKEND dari GDS real-time API: flight status
                         statusEn: 'Delayed +4h 25m',
@@ -485,6 +551,8 @@
                         flightNumber: 'GA830', // #BACKEND dari GDS Atlas API: recommended alternative
                         airline: 'Garuda Indonesia',
                         airlineCode: 'GA',
+                        aircraft: 'Boeing 737-800',
+                        gate: '4A',
                         fromCity: 'Jakarta',
                         fromCode: 'CGK',
                         toCity: 'Singapura',
@@ -635,6 +703,38 @@
                         ];
                     }
 
+                    // id: Override status dengan data asli dari database — kartu sesi di chatSessions membawa
+                    //     status tabel mock_gds_bookings (delayed/on_time/cancelled/flown) yang dikirim server,
+                    //     sehingga badge status kartu atas mengikuti kondisi GDS yang sebenarnya dan PNR di luar
+                    //     tiket demo tidak selalu jatuh ke default 'on-time'.
+                    //     Tiket demo (GA826/SQ951/SQ638) sengaja tidak di-override karena skenario & teks
+                    //     percakapannya sudah dikurasi manual; status 'rebooked' juga tidak ditimpa karena
+                    //     berasal dari aksi rebooking user yang dipulihkan dari localStorage.
+                    // en: Override status with real database data — the session card in chatSessions carries the
+                    //     mock_gds_bookings table status (delayed/on_time/cancelled/flown) sent by the server,
+                    //     so the top card status badge follows the actual GDS condition and PNRs outside the
+                    //     demo tickets no longer always fall back to the 'on-time' default.
+                    //     Demo tickets (GA826/SQ951/SQ638) are intentionally left untouched because their
+                    //     scenario & chat copy are manually curated; 'rebooked' is never overridden because it
+                    //     comes from the user's rebooking action restored from localStorage.
+                    const demoTicketIds = ['GA826', 'SQ951', 'SQ638'];
+                    const sessionCard = Array.isArray(this.chatSessions)
+                        ? this.chatSessions.find(s => s.pnr_code === id)
+                        : null;
+                    if (!demoTicketIds.includes(id) && sessionCard && sessionCard.status && this.flightStatus !== 'rebooked') {
+                        const dbStatusMap = {
+                            delayed: 'delayed',
+                            cancelled: 'cancelled',
+                            on_time: 'on-time',
+                            active: 'on-time',
+                            flown: 'on-time',
+                            completed: 'on-time',
+                        };
+                        if (dbStatusMap[sessionCard.status]) {
+                            this.flightStatus = dbStatusMap[sessionCard.status];
+                        }
+                    }
+
                     // id: Muat riwayat chat tersimpan dari database untuk tiket ini — jika ada riwayat,
                     //     riwayat tersebut menggantikan greeting awal sehingga percakapan lama tetap lanjut.
                     // en: Load stored chat history from the database for this ticket — if history exists,
@@ -651,6 +751,53 @@
                     if (status === 'rebooked') {
                         this.activeSidebarTab = 'schedule';
                     }
+                },
+
+                // id: markAllNotificationsRead() — Menandai seluruh notifikasi sebagai sudah dibaca:
+                //     langsung di state lokal (badge lonceng hilang seketika) lalu dipersistenkan ke
+                //     database via POST /api/notifications/read-all.
+                // en: markAllNotificationsRead() — Marks every notification as read: instantly in local
+                //     state (bell badge disappears at once), then persisted to the database via
+                //     POST /api/notifications/read-all.
+                markAllNotificationsRead() {
+                    this.notifications.forEach(n => { n.is_read = true; });
+                    fetch('/api/notifications/read-all', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    }).catch(() => {});
+                },
+
+                // id: notifTimeAgo(iso) — Waktu relatif notifikasi (Baru saja / Xm lalu / Xj lalu / Xh lalu)
+                //     dihitung dari created_at asli database, menggantikan string statis "2m lalu".
+                // en: notifTimeAgo(iso) — Relative notification time (Just now / Xm ago / Xh ago / Xd ago)
+                //     computed from the real database created_at, replacing the static "2m ago" strings.
+                notifTimeAgo(iso) {
+                    if (!iso) return '';
+                    const diff = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+                    const id = this.lang === 'id';
+                    if (diff < 60) return id ? 'Baru saja' : 'Just now';
+                    if (diff < 3600) { const m = Math.floor(diff / 60); return id ? m + 'm lalu' : m + 'm ago'; }
+                    if (diff < 86400) { const h = Math.floor(diff / 3600); return id ? h + 'j lalu' : h + 'h ago'; }
+                    const d = Math.floor(diff / 86400);
+                    return id ? d + ' hari lalu' : d + 'd ago';
+                },
+
+                // id: notifMeta(type) — Ikon & warna per jenis alert (delay/cancelled/alternative/rebooked/baggage)
+                //     agar dropdown navbar tetap konsisten secara visual dengan desain kartu lama.
+                // en: notifMeta(type) — Icon & color per alert type (delay/cancelled/alternative/rebooked/baggage)
+                //     so the navbar dropdown stays visually consistent with the old card design.
+                notifMeta(type) {
+                    const map = {
+                        delay: { icon: 'fa-triangle-exclamation', color: 'text-amber-600' },
+                        cancelled: { icon: 'fa-ban', color: 'text-rose-600' },
+                        alternative: { icon: 'fa-plane-departure', color: 'text-brand-600' },
+                        rebooked: { icon: 'fa-plane-circle-check', color: 'text-blue-600' },
+                        baggage: { icon: 'fa-suitcase-rolling', color: 'text-emerald-600' },
+                    };
+                    return map[type] || { icon: 'fa-bell', color: 'text-slate-600' };
                 },
 
                 // id: setLanguage(l) — Mengubah bahasa aplikasi (id/en). Simpan ke localStorage dan kirim request ke backend Laravel untuk set session locale.
@@ -684,10 +831,44 @@
                         arrTime: altFlight.arrTime,
                         duration: altFlight.duration,
                         durationEn: altFlight.durationEn,
+                        // id: Gate & tipe pesawat ikut dipindahkan agar overview/receipts menampilkan data maskapai baru
+                        // en: Gate & aircraft type are carried over so overview/receipts show the new airline data
+                        gate: altFlight.gate || '4A',
+                        aircraft: altFlight.aircraft || 'Boeing 737-800',
                         departureCountdownId: 'Berangkat ' + altFlight.depTime + ' WIB',
                         departureCountdownEn: 'Departs at ' + altFlight.depTime,
                     };
                     this.rebookFlight(altFlight);
+                },
+
+                // #BACKEND id: persistRebookedState() — Saat ini status rebooking disimpan di localStorage per PNR agar bertahan setelah refresh.
+                //     Di produksi: status rebooked harus berasal dari database bookings (kolom status + flight rebooking) via API.
+                // en: persistRebookedState() — Currently rebooking state is stored in localStorage per PNR so it survives refresh.
+                //     In production: the rebooked status must come from the bookings database (status column + rebooked flight) via API.
+                persistRebookedState() {
+                    try {
+                        localStorage.setItem('rebound_rebooked_' + this.selectedTicketId, JSON.stringify({
+                            flightStatus: 'rebooked',
+                            alternative: this.flight.alternative,
+                            savedAt: new Date().toISOString(),
+                        }));
+                    } catch (e) {}
+                },
+
+                // id: restoreRebookedState() — Dipanggil di init() setelah selectTicket(); jika ada state rebooking tersimpan
+                //     untuk tiket aktif, pulihkan flight.alternative & flightStatus 'rebooked'.
+                // en: restoreRebookedState() — Called in init() after selectTicket(); if a saved rebooking state exists for the
+                //     active ticket, restores flight.alternative & 'rebooked' flightStatus.
+                restoreRebookedState() {
+                    try {
+                        const raw = localStorage.getItem('rebound_rebooked_' + this.selectedTicketId);
+                        if (!raw) return;
+                        const saved = JSON.parse(raw);
+                        if (saved && saved.flightStatus === 'rebooked' && saved.alternative && saved.alternative.flightNumber) {
+                            this.flight.alternative = saved.alternative;
+                            this.flightStatus = 'rebooked';
+                        }
+                    } catch (e) {}
                 },
 
                 // #BACKEND Rebook action with multi-step telemetry dispatch animation
@@ -717,6 +898,9 @@
                         setTimeout(() => {
                             this.isRebookingProcess = false;
                             this.flightStatus = 'rebooked';
+                            // id: Simpan state rebooking agar tetap tampil setelah halaman di-refresh
+                            // en: Persist rebooking state so it still shows after the page is refreshed
+                            this.persistRebookedState();
                             // id: Otomatis pindah ke tab receipts untuk tampilkan boarding pass baru
                             // en: Automatically switch to receipts tab to show new boarding pass
                             this.activeSidebarTab = 'receipts';
@@ -856,7 +1040,7 @@
                                 // Pastikan token Sanctum atau CSRF disertakan jika perlu
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
-                            body: JSON.stringify({ message: text, pnr: this.selectedTicketId })
+                            body: JSON.stringify({ message: text, pnr: this.selectedTicketId, lang: this.lang })
                         });
 
                         const data = await response.json();
@@ -888,10 +1072,13 @@
                     this.isDownloadingPdf = true;
                     setTimeout(() => {
                         this.isDownloadingPdf = false;
-                        const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
-                        const airline = 'Garuda Indonesia';
-                        const gate = this.flightStatus === 'rebooked' ? '4A' : '3B';
-                        const boarding = this.flightStatus === 'rebooked' ? '12:00 WIB' : '08:50 WIB';
+                        // id: Semua data diambil dari activeFlight agar PDF mengikuti penerbangan hasil rebooking (mis. Batik Air ID7153)
+                        // en: All data comes from activeFlight so the PDF follows the rebooked flight (e.g. Batik Air ID7153)
+                        const af = this.activeFlight;
+                        const flightNo = af.flightNumber;
+                        const airline = af.airline;
+                        const gate = af.gate;
+                        const boarding = af.boardingTime + ' WIB';
 
                         // id: Buka jendela baru untuk cetak boarding pass HTML. Di produksi: redirect ke GET /api/boarding-pass/{pnr}/pdf
                         // en: Open new window to print boarding pass HTML. In production: redirect to GET /api/boarding-pass/{pnr}/pdf
@@ -930,7 +1117,7 @@
                                         <div class="header">
                                             <div>
                                                 <h1>${airline}</h1>
-                                                <p>${flightNo} • BOEING 737-800 • ECONOMY CLASS (V)</p>
+                                                <p>${flightNo} • ${af.aircraft.toUpperCase()} • ${af.class.toUpperCase()}</p>
                                             </div>
                                             <div class="badge">CONFIRMED / BOARDING</div>
                                         </div>
@@ -938,17 +1125,17 @@
                                             <div class="route">
                                                 <div>
                                                     <div class="city">FROM / DARI</div>
-                                                    <div class="code">CGK</div>
-                                                    <div style="font-size:12px; font-weight:600;">Jakarta (CGK)</div>
+                                                    <div class="code">${af.fromCode}</div>
+                                                    <div style="font-size:12px; font-weight:600;">${af.fromCity} (${af.fromCode})</div>
                                                 </div>
                                                 <div style="text-align:center;">
-                                                    <div style="font-size:11px; font-weight:bold; color:#059669;">NON-STOP (1h 45m)</div>
+                                                    <div style="font-size:11px; font-weight:bold; color:#059669;">NON-STOP (${af.durationEn})</div>
                                                     <div style="font-size:14px; font-weight:bold; color:#0284c7; letter-spacing:2px;">DIRECT FLIGHT &rarr;</div>
                                                 </div>
                                                 <div style="text-align:right;">
                                                     <div class="city">TO / KE</div>
-                                                    <div class="code">SIN</div>
-                                                    <div style="font-size:12px; font-weight:600;">Singapore (SIN)</div>
+                                                    <div class="code">${af.toCode}</div>
+                                                    <div style="font-size:12px; font-weight:600;">${af.toCityEn} (${af.toCode})</div>
                                                 </div>
                                             </div>
                                             <div class="grid">
@@ -997,10 +1184,11 @@
                     this.isDownloadingPkpass = true;
                     setTimeout(() => {
                         this.isDownloadingPkpass = false;
-                        const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
+                        const afp = this.activeFlight;
+                        const flightNo = afp.flightNumber;
                         const filename = `BoardingPass-${flightNo}-${this.currentUser.name.replace(/\s+/g, '_')}.pkpass`;
                         const dummyBlob = new Blob([
-                            `REBOUND AVIATION ELECTRONIC BOARDING PASS (.PKPASS)\n===================================================\nPassenger: ${this.currentUser.passenger}\nFlight: ${flightNo}\nRoute: CGK -> SIN\nGate: ${this.flightStatus === 'rebooked' ? '4A' : '3B'}\nSeat: 14A\nZone: 2\nPNR: GA-9821A\nStatus: CONFIRMED\nDisruption Fee Waiver 72A: Rp 0\nBarcode: M1PRASETYO/ZAKARIA EGA830 CGKSIN\n===================================================`
+                            `REBOUND AVIATION ELECTRONIC BOARDING PASS (.PKPASS)\n===================================================\nPassenger: ${this.currentUser.passenger}\nAirline: ${afp.airline}\nFlight: ${flightNo}\nRoute: ${afp.fromCode} -> ${afp.toCode}\nGate: ${afp.gate}\nSeat: ${afp.seat}\nZone: ${afp.zone}\nPNR: GA-9821A\nStatus: CONFIRMED\nDisruption Fee Waiver 72A: Rp 0\nBarcode: M1${this.currentUser.passenger.replace(/[^A-Za-z]/g, '').slice(0, 8).toUpperCase()} E${flightNo} E${afp.fromCode}${afp.toCode}\n===================================================`
                         ], { type: 'application/vnd.apple.pkpass' });
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(dummyBlob);
@@ -1021,7 +1209,7 @@
                 // id: Google Wallet masih toast saja — harus integrasi Google Wallet API dengan JWT pass dari server
                 // en: Google Wallet is toast-only — must integrate Google Wallet API with JWT pass from server
                 saveGoogleWallet() {
-                    const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
+                    const flightNo = this.activeFlight.flightNumber;
                     this.showToast(
                         this.lang === 'id'
                             ? `Pass Digital ${flightNo} berhasil disinkronkan ke Google Wallet Android!`
@@ -1034,9 +1222,12 @@
                 // #BACKEND id: QR code harus di-generate dari server dengan data booking dari database, bukan dari API pihak ketiga
                 // #BACKEND en: QR code must be server-generated with booking data from database, not from third-party API
                 downloadPassImage() {
-                    const flightNo = this.flightStatus === 'rebooked' ? 'GA830' : 'GA826';
+                    // id: Data QR diambil dari activeFlight agar gambar mengikuti penerbangan hasil rebooking
+                    // en: QR data comes from activeFlight so the image follows the rebooked flight
+                    const af = this.activeFlight;
+                    const flightNo = af.flightNumber;
                     const link = document.createElement('a');
-                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent('REBOUND PASS: PNR GA-9821A | ' + this.currentUser.passenger + ' | ' + flightNo + ' CGK->SIN | SEAT: 14A | GATE: ' + (this.flightStatus === 'rebooked' ? '4A' : '3B'))}`;
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=15&data=${encodeURIComponent('REBOUND PASS: PNR GA-9821A | ' + this.currentUser.passenger + ' | ' + flightNo + ' ' + af.fromCode + '->' + af.toCode + ' | SEAT: ' + af.seat + ' | GATE: ' + af.gate)}`;
                     link.download = `BoardingPass-QR-${flightNo}.png`;
                     document.body.appendChild(link);
                     link.click();

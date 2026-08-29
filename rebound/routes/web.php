@@ -91,11 +91,32 @@ Route::middleware('auth')->group(function () {
                 ];
             });
 
+        // id: Notifikasi operasional milik user dari tabel notifications — dirender dropdown navbar,
+        //     menggantikan tiga kartu alert statis yang dulu di-hardcode.
+        // en: The user's operational notifications from the notifications table — rendered in the navbar
+        //     dropdown, replacing the three static alert cards previously hardcoded.
+        $notifications = $user->appNotifications()
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn ($notification) => [
+                'id' => $notification->id,
+                'pnr_code' => $notification->pnr_code,
+                'type' => $notification->type,
+                'title_id' => $notification->title_id,
+                'title_en' => $notification->title_en,
+                'message_id' => $notification->message_id,
+                'message_en' => $notification->message_en,
+                'is_read' => (bool) $notification->is_read,
+                'created_at' => $notification->created_at->toIso8601String(),
+            ]);
+
         return view('welcome', [
             'hasSetupPnr' => $activePnrCode !== null,
             'activePnrCode' => $activePnrCode,
             'userTickets' => $userTickets,
             'chatSessions' => $chatSessions,
+            'notifications' => $notifications,
         ]);
 
     })->name('dashboard');

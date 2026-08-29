@@ -118,8 +118,12 @@
 
              // id: activateOnServer(ticketKey) — Menyimpan PNR yang terverifikasi ke database via POST /api/pnr/activate
              //     agar status aktivasi (hasSetupPnr) bertahan setelah halaman di-refresh, bukan hanya di localStorage.
+             //     Saat Laravel menjawab sukses, kartu sesi chat yang baru dibuat langsung dimasukkan ke sidebar kiri
+             //     (chatSessions) sehingga tampil seketika tanpa perlu refresh halaman.
              // en: activateOnServer(ticketKey) — Persists the verified PNR to the database via POST /api/pnr/activate
              //     so the activation state (hasSetupPnr) survives a page refresh, not just in localStorage.
+             //     When Laravel answers success, the newly created chat session card is inserted straight into the
+             //     left sidebar (chatSessions) so it shows up instantly without a page refresh.
              activateOnServer(ticketKey) {
                  fetch('/api/pnr/activate', {
                      method: 'POST',
@@ -132,7 +136,17 @@
                          pnr_code: ticketKey,
                          last_name: (this.passengerInput || '').trim() || null,
                      })
-                 }).catch(() => {});
+                 })
+                 .then(response => response.ok ? response.json() : null)
+                 .then(data => {
+                     if (data && data.status === 'success' && data.data && data.data.session) {
+                         const session = data.data.session;
+                         if (Array.isArray(chatSessions) && !chatSessions.some(s => s.pnr_code === session.pnr_code)) {
+                             chatSessions.unshift(session);
+                         }
+                     }
+                 })
+                 .catch(() => {});
              },
 
              // id: activateDbTicket(ticket) — Mengaktifkan kembali tiket asli milik user yang diambil dari

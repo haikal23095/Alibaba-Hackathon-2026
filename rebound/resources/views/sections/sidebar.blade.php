@@ -12,31 +12,31 @@
     <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
         <div>
             <h3 class="text-sm font-bold text-slate-900 tracking-tight"
-                x-text="lang === 'id' ? 'Status ' + (flight.original.flightNumber || selectedTicketId) : (flight.original.flightNumber || selectedTicketId) + ' Status'"></h3>
+                x-text="lang === 'id' ? 'Status ' + activeFlight.flightNumber : activeFlight.flightNumber + ' Status'"></h3>
             
             <div class="flex items-center gap-1.5 mt-0.5 text-[11px]">
                 <template x-if="flightStatus === 'on-time' || flightStatus === 'on_time' || flightStatus === 'active'">
                     <span class="text-emerald-600 font-semibold flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        <span x-text="lang === 'id' ? 'Tepat Waktu • ' + (flight.original.fromCode || 'CGK') + ' ke ' + (flight.original.toCode || 'SIN') : 'On Time • ' + (flight.original.fromCode || 'CGK') + ' to ' + (flight.original.toCode || 'SIN')"></span>
+                        <span x-text="lang === 'id' ? 'Tepat Waktu • ' + activeFlight.fromCode + ' ke ' + activeFlight.toCode : 'On Time • ' + activeFlight.fromCode + ' to ' + activeFlight.toCode"></span>
                     </span>
                 </template>
                 <template x-if="flightStatus === 'delayed'">
                     <span class="text-amber-600 font-semibold flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                        <span x-text="lang === 'id' ? 'Terlambat • ' + (flight.original.fromCode || 'CGK') + ' ke ' + (flight.original.toCode || 'SIN') : 'Delayed • ' + (flight.original.fromCode || 'CGK') + ' to ' + (flight.original.toCode || 'SIN')"></span>
+                        <span x-text="lang === 'id' ? 'Terlambat • ' + activeFlight.fromCode + ' ke ' + activeFlight.toCode : 'Delayed • ' + activeFlight.fromCode + ' to ' + activeFlight.toCode"></span>
                     </span>
                 </template>
                 <template x-if="flightStatus === 'cancelled'">
                     <span class="text-rose-600 font-semibold flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                        <span x-text="lang === 'id' ? 'Dibatalkan • ' + (flight.original.fromCode || 'CGK') + ' ke ' + (flight.original.toCode || 'SIN') : 'Cancelled • ' + (flight.original.fromCode || 'CGK') + ' to ' + (flight.original.toCode || 'SIN')"></span>
+                        <span x-text="lang === 'id' ? 'Dibatalkan • ' + activeFlight.fromCode + ' ke ' + activeFlight.toCode : 'Cancelled • ' + activeFlight.fromCode + ' to ' + activeFlight.toCode"></span>
                     </span>
                 </template>
                 <template x-if="flightStatus === 'rebooked'">
                     <span class="text-brand-600 font-semibold flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                        <span x-text="lang === 'id' ? 'Telah Diubah ke ' + flight.alternative.flightNumber : 'Rebooked to ' + flight.alternative.flightNumber"></span>
+                        <span x-text="lang === 'id' ? 'Telah Diubah ke ' + activeFlight.flightNumber : 'Rebooked to ' + activeFlight.flightNumber"></span>
                     </span>
                 </template>
             </div>
@@ -160,8 +160,10 @@
                         <i class="fa-solid fa-plane text-[11px]"></i>
                     </div>
                     <div>
-                        <div class="font-bold text-slate-900 text-xs" x-text="flight.original.airline || 'Garuda Indonesia'"></div>
-                        <div class="text-[11px] text-slate-500 font-medium" x-text="flight.original.class || 'Economy (V)'"></div>
+                        {{-- id: Data maskapai & kelas mengikuti activeFlight agar setelah rebooking menampilkan maskapai baru (mis. Batik Air), bukan Garuda lama
+                             en: Airline & class follow activeFlight so after rebooking the new airline (e.g. Batik Air) is shown, not the old Garuda --}}
+                        <div class="font-bold text-slate-900 text-xs" x-text="activeFlight.airline"></div>
+                        <div class="text-[11px] text-slate-500 font-medium" x-text="activeFlight.class"></div>
                     </div>
                 </div>
 
@@ -170,18 +172,18 @@
                     <!-- Origin Departure -->
                     <div class="relative">
                         <div class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-400 ring-2 ring-white"></div>
-                        <div class="font-bold text-slate-900 text-xs" x-text="(flight.original.fromCode || 'CGK') + ' ' + (flight.original.fromCity || 'Jakarta')"></div>
+                        <div class="font-bold text-slate-900 text-xs" x-text="activeFlight.fromCode + ' ' + activeFlight.fromCity"></div>
                         <div class="text-[11px] text-slate-500 font-medium"
-                             x-text="(flight.original.date || '30 Nov') + ', ' + (flight.original.depTime || '09:30')"></div>
+                             x-text="activeFlight.date + ', ' + activeFlight.depTime"></div>
                     </div>
 
                     <!-- Destination Arrival -->
                     <div class="relative">
                         <div class="absolute -left-5 top-1 w-2 h-2 rounded-full bg-slate-900 ring-2 ring-white"></div>
                         <div class="font-bold text-slate-900 text-xs"
-                             x-text="(flight.original.toCode || 'SIN') + ' ' + (lang === 'id' ? (flight.original.toCity || 'Singapura') : (flight.original.toCityEn || flight.original.toCity || 'Singapore'))"></div>
+                             x-text="activeFlight.toCode + ' ' + (lang === 'id' ? activeFlight.toCity : activeFlight.toCityEn)"></div>
                         <div class="text-[11px] text-slate-500 font-medium"
-                             x-text="(flight.original.date || '30 Nov') + ', ' + (flight.original.arrTime || '12:20')"></div>
+                             x-text="activeFlight.date + ', ' + activeFlight.arrTime"></div>
                     </div>
                 </div>
             </div>
@@ -257,19 +259,25 @@
             <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-2.5 text-xs">
                 <div class="font-bold text-slate-900" x-text="lang === 'id' ? 'Penerbangan Hari Ini' : 'Flights Today'"></div>
 
+                {{-- id: Kartu penerbangan aktif — mengikuti activeFlight sehingga setelah rebooking menampilkan data penerbangan baru
+                     en: Active flight card — follows activeFlight so after rebooking it shows the new flight data --}}
                 <!-- Active Flight Card -->
                 <div class="p-2.5 rounded-lg border text-[11px]"
                      :class="flightStatus === 'delayed' ? 'border-amber-200 bg-amber-50/50' : 'border-emerald-200 bg-emerald-50/50'">
                     <div class="flex items-center justify-between font-bold text-slate-900 mb-0.5">
-                        <span x-text="(flight.original.flightNumber || selectedTicketId) + ' • ' + (flight.original.depTime || '09:30')"></span>
+                        <span x-text="activeFlight.flightNumber + ' • ' + activeFlight.depTime"></span>
                         <span :class="flightStatus === 'delayed' ? 'text-amber-700 font-semibold' : 'text-emerald-700 font-semibold'"
-                              x-text="flightStatus === 'delayed' ? (lang === 'id' ? 'Terlambat +4j 25m' : 'Delayed +4h 25m') : (lang === 'id' ? 'Tepat Waktu' : 'On Time')"></span>
+                              x-text="flightStatus === 'delayed' ? (lang === 'id' ? 'Terlambat +4j 25m' : 'Delayed +4h 25m') : (flightStatus === 'rebooked' ? (lang === 'id' ? 'Terkonfirmasi (Rebook)' : 'Confirmed (Rebook)') : (lang === 'id' ? 'Tepat Waktu' : 'On Time'))"></span>
                     </div>
-                    <p class="text-slate-500 text-[10px]" x-text="'Gate ' + (flight.original.gate || '3B') + ' • Terminal ' + (flight.original.terminal || '3') + ' ' + (flight.original.fromCode || 'CGK')"></p>
+                    <p class="text-slate-500 text-[10px]" x-text="'Gate ' + activeFlight.gate + ' • Terminal ' + activeFlight.terminal + ' ' + activeFlight.fromCode"></p>
                 </div>
 
-                <!-- Alternative Flight Card (when delayed/rebooked) -->
-                <template x-if="flightStatus === 'delayed' || flightStatus === 'rebooked'">
+                {{-- id: Kartu penerbangan alternatif hanya muncul saat masih delayed (sebelum rebooking),
+                         karena setelah rebooked kartu di atas sudah menampilkan penerbangan baru
+                     en: Alternative flight card only appears while delayed (before rebooking),
+                         because after rebooked the card above already shows the new flight --}}
+                <!-- Alternative Flight Card (when delayed) -->
+                <template x-if="flightStatus === 'delayed'">
                     <div class="p-2.5 rounded-lg border border-brand-200 bg-blue-50/60 text-[11px]">
                         <div class="flex items-center justify-between font-bold text-slate-900 mb-0.5">
                             <span x-text="flight.alternative.flightNumber + ' • ' + flight.alternative.depTime"></span>

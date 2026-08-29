@@ -38,7 +38,7 @@
              en: QR code payload currently uses external API (qrserver). In production: generate internal SVG/PNG from Laravel backend using bacon/bacon-qr-code library. --}}
         <!-- Real Large Scannable QR Code -->
         <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 inline-block">
-            <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&data=' + encodeURIComponent('REBOUND AVIATION E-PASS\nPNR: GA-9821A\nPAX: ' + currentUser.passenger + '\nFLIGHT: ' + (flightStatus === 'rebooked' ? 'GA830' : 'GA826') + ' CGK->SIN\nGATE: ' + (flightStatus === 'rebooked' ? '4A' : '3B') + '\nSEAT: 14A\nZONE: 2\nSTATUS: CONFIRMED')" 
+            <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&data=' + encodeURIComponent('REBOUND AVIATION E-PASS\nPNR: GA-9821A\nPAX: ' + currentUser.passenger + '\nFLIGHT: ' + activeFlight.flightNumber + ' ' + activeFlight.fromCode + '->' + activeFlight.toCode + '\nGATE: ' + activeFlight.gate + '\nSEAT: ' + activeFlight.seat + '\nZONE: ' + activeFlight.zone + '\nSTATUS: CONFIRMED')" 
                  alt="Scannable Boarding QR"
                  class="w-40 h-40 mx-auto rounded bg-white p-1">
         </div>
@@ -53,7 +53,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-slate-500" x-text="lang === 'id' ? 'Penerbangan' : 'Flight'"></span>
-                <span class="font-bold text-slate-900" x-text="(flightStatus === 'rebooked' ? 'GA830' : 'GA826') + ' (14A)'"></span>
+                <span class="font-bold text-slate-900" x-text="activeFlight.flightNumber + ' (' + activeFlight.seat + ')'"></span>
             </div>
             <div class="flex justify-between">
                 <span class="text-slate-500">PNR</span>

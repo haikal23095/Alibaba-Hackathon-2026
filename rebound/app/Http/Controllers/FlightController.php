@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\AgentChatSession;
 use App\Models\MockGdsBooking;
+use App\Models\Notification;
 use App\Models\UserPnr;
 
 class FlightController extends Controller
@@ -99,12 +100,37 @@ class FlightController extends Controller
 
         // id: Tiket yang diaktifkan juga langsung punya sesi chat agar tampil di sidebar kiri
         // en: The activated ticket also gets a chat session right away so it shows in the left sidebar
-        $this->ensureChatSession($user->id, $pnrCode);
+        $session = $this->ensureChatSession($user->id, $pnrCode);
+        $booking = MockGdsBooking::where('pnr_code', $pnrCode)->first();
+
+        // id: Jika GDS menyatakan penerbangan terganggu, langsung kirim alert ke pusat notifikasi user
+        // en: When the GDS reports a disrupted flight, immediately push an alert to the user's notification center
+        $this->ensureDisruptionNotification($user->id, $booking, $pnrCode);
 
         return response()->json([
             'status' => 'success',
             'message' => 'PNR berhasil diaktifkan.',
-            'data' => ['pnr_code' => $pnr->pnr_code],
+            'data' => [
+                'pnr_code' => $pnr->pnr_code,
+                // id: Kartu sesi untuk sidebar kiri — bentuknya sama dengan respons verify(),
+                //     sehingga frontend bisa langsung menampilkannya tanpa refresh halaman.
+                // en: Session card for the left sidebar — same shape as verify()'s response,
+                //     so the frontend can display it immediately without a page refresh.
+                'session' => [
+                    'id' => $session->id,
+                    'pnr_code' => $session->pnr_code,
+                    'context_summary' => $session->context_summary,
+                    'last_message' => 'Belum ada pesan.',
+                    'last_message_sender' => 'system',
+                    'last_message_time' => null,
+                    'flight_number' => $booking?->flight_number,
+                    'from_code' => $booking?->from_code,
+                    'to_code' => $booking?->to_code,
+                    'departure_time' => $booking?->departure_time?->format('d M Y') ?? '',
+                    'status' => $booking?->status ?? 'active',
+                    'cabin_class' => $booking?->cabin_class,
+                ],
+            ],
         ], 200);
     }
 
@@ -168,6 +194,10 @@ class FlightController extends Controller
         //     so it appears in the left sidebar without waiting for the first chat message.
         $session = $this->ensureChatSession($user->id, $pnrCode, $booking);
 
+        // id: Jika GDS menyatakan penerbangan terganggu, langsung kirim alert ke pusat notifikasi user
+        // en: When the GDS reports a disrupted flight, immediately push an alert to the user's notification center
+        $this->ensureDisruptionNotification($user->id, $booking, $pnrCode);
+
         return response()->json([
             'status' => 'success',
             'message' => 'PNR valid menurut GDS dan telah dicatat ke akun Anda.',
@@ -222,6 +252,36 @@ class FlightController extends Controller
         return AgentChatSession::firstOrCreate(
             ['user_id' => $userId, 'pnr_code' => $pnrCode],
             ['context_summary' => $summary]
+        );
+    }
+
+    // id: Buat notifikasi gangguan (delay/cancelled) saat tiket diverifikasi/diaktifkan dan GDS
+    //     menyatakan penerbangannya terganggu. firstOrCreate per user+pnr+type mencegah duplikat
+    //     saat user memverifikasi ulang tiket yang sama.
+    // en: Create a disruption notification (delay/cancelled) when a ticket is verified/activated
+    //     and the GDS reports its flight as disrupted. firstOrCreate per user+pnr+type prevents
+    //     duplicates when the user re-verifies the same ticket.
+    private function ensureDisruptionNotification(int $userId, ?MockGdsBooking $booking, string $pnrCode): void
+    {
+        if (! $booking || ! in_array($booking->status, ['delayed', 'cancelled'], true)) {
+            return;
+        }
+
+        $isDelayed = $booking->status === 'delayed';
+        $flight = $booking->flight_number;
+
+        Notification::firstOrCreate(
+            ['user_id' => $userId, 'pnr_code' => $pnrCode, 'type' => $isDelayed ? 'delay' : 'cancelled'],
+            [
+                'title_id' => $isDelayed ? 'Keterlambatan Penerbangan' : 'Penerbangan Dibatalkan',
+                'title_en' => $isDelayed ? 'Flight Delay' : 'Flight Cancelled',
+                'message_id' => $isDelayed
+                    ? "Penerbangan {$flight} Anda resmi ditunda oleh pihak maskapai. Opsi rebooking telah aktif."
+                    : "Penerbangan {$flight} Anda dibatalkan oleh pihak maskapai. Opsi rebooking & kompensasi telah aktif.",
+                'message_en' => $isDelayed
+                    ? "Your flight {$flight} has been officially delayed by the airline. Rebooking options are now active."
+                    : "Your flight {$flight} has been cancelled by the airline. Rebooking & compensation options are now active.",
+            ]
         );
     }
 

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\NotificationController;
 /*
 |--------------------------------------------------------------------------
 | REBOUND Enterprise API Routes
@@ -38,6 +39,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // id: Hapus sesi percakapan AI & riwayat pesan untuk menghemat memori
     // en: Delete AI chat session & message history to save storage space
     Route::delete('/chat/session/{id}', [ChatController::class, 'deleteSession']);
+
+    // id: Pusat notifikasi — daftar alert operasional milik user (dari tabel notifications)
+    //     dan penandaan semua notifikasi sebagai sudah dibaca dari dropdown navbar.
+    // en: Notification center — the user's operational alerts (from the notifications table)
+    //     and mark-all-read triggered from the navbar dropdown.
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
 
 
     // ---------------------------------------------------------

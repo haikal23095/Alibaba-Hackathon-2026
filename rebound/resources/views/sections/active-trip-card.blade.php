@@ -20,10 +20,10 @@
             
             <div class="flex items-center gap-1.5">
                 <span class="text-xs sm:text-sm font-bold text-slate-900 tracking-tight"
-                      x-text="flight.original.fromCode || 'CGK'"></span>
+                      x-text="activeFlight.fromCode"></span>
                 <i class="fa-solid fa-arrow-right-long text-[8px] text-slate-400"></i>
                 <span class="text-xs sm:text-sm font-bold text-slate-900 tracking-tight"
-                      x-text="flight.original.toCode || 'SIN'"></span>
+                      x-text="activeFlight.toCode"></span>
             </div>
         </div>
 
@@ -104,7 +104,7 @@
             <!-- Rebooked Time -->
             <template x-if="flightStatus === 'rebooked'">
                 <div>
-                    <span class="font-bold text-emerald-700 text-[11px]">30 Nov, 12:40 PM</span>
+                    <span class="font-bold text-emerald-700 text-[11px]" x-text="activeFlight.date + ', ' + activeFlight.depTime"></span>
                     <span class="text-[10px] text-emerald-600 block" x-text="lang === 'id' ? 'Siap Berangkat' : 'Ready for Boarding'"></span>
                 </div>
             </template>

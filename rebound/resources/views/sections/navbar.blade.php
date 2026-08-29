@@ -1,7 +1,7 @@
 {{-- id: Navbar utama \u2014 berisi logo REBOUND, tombol sidebar, navigasi desktop, pemilih bahasa (ID/EN), notifikasi, profil user
      en: Main navbar \u2014 contains REBOUND logo, sidebar toggle, desktop navigation, language picker (ID/EN), notifications, user profile
-     #BACKEND id: Data profil user (nama, inisial, email) diambil dari currentUser yang sudah dari Auth. Notifikasi harus dari database notifications.
-     #BACKEND en: User profile data (name, initials, email) from currentUser already from Auth. Notifications must come from notifications database. --}}
+     #BACKEND id: Data profil user (nama, inisial, email) diambil dari currentUser yang sudah dari Auth. Notifikasi kini nyata dari tabel notifications.
+     #BACKEND en: User profile data (name, initials, email) from currentUser already from Auth. Notifications now come from the real notifications table. --}}
 <header class="h-[64px] sm:h-[56px] pt-2.5 sm:pt-0 bg-white border-b border-[#E2E8F0] px-3.5 sm:px-5 md:px-6 flex items-center justify-between z-30 shrink-0 select-none relative">
     
     <!-- LEFT: Logo -->
@@ -156,56 +156,45 @@
                 <div class="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
                         <span class="font-bold text-slate-900" x-text="lang === 'id' ? 'Notifikasi Operasional' : 'Operational Alerts'"></span>
-                        <span x-show="hasUnreadNotif" class="px-1.5 py-0.2 bg-amber-100 text-amber-800 font-bold text-[9px] rounded">3 Baru</span>
+                        {{-- id: Jumlah notifikasi belum dibaca dihitung dari tabel notifications, bukan hardcode "3 Baru"
+                             en: Unread count computed from the notifications table, not a hardcoded "3 New" --}}
+                        <span x-show="hasUnreadNotif" x-cloak class="px-1.5 py-0.2 bg-amber-100 text-amber-800 font-bold text-[9px] rounded"
+                              x-text="unreadNotifCount + (lang === 'id' ? ' Baru' : ' New')"></span>
                     </div>
-                    <button @click="hasUnreadNotif = false" 
+                    <button @click="markAllNotificationsRead()" 
                             class="text-[10.5px] text-brand-600 hover:text-brand-700 font-semibold cursor-pointer"
                             x-text="lang === 'id' ? 'Tandai Dibaca' : 'Mark Read'">
                     </button>
                 </div>
 
+                {{-- id: Daftar notifikasi dinamis dari tabel notifications (dikirim route dashboard).
+                     Ikon, warna, judul, isi, dan waktu relatif semuanya mengikuti data asli database.
+                     en: Dynamic notification list from the notifications table (sent by the dashboard route).
+                     Icon, color, title, body, and relative time all follow the real database data. --}}
                 <!-- Notifications List -->
                 <div class="divide-y divide-slate-100 max-h-72 overflow-y-auto custom-scrollbar">
-                    
-                    <!-- Alert 1: Flight Delay -->
-                    <div class="p-2.5 hover:bg-slate-50 transition cursor-pointer space-y-0.5">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-amber-600 flex items-center gap-1">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span x-text="lang === 'id' ? 'Keterlambatan Penerbangan' : 'Flight Delay'"></span>
-                            </span>
-                            <span class="text-[9px] text-slate-400 font-mono">2m lalu</span>
-                        </div>
-                        <p class="text-[11px] text-slate-700 font-medium leading-snug"
-                           x-text="lang === 'id' ? 'GA826 resmi ditunda +4 jam karena cuaca buruk. Opsi rebooking telah aktif.' : 'GA826 officially delayed +4 hours due to weather. Rebooking options activated.'"></p>
-                    </div>
 
-                    <!-- Alert 2: Rebooking Available -->
-                    <div class="p-2.5 hover:bg-slate-50 transition cursor-pointer space-y-0.5"
-                         @click="mobileTab = 'assistant'; notifOpen = false">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-brand-600 flex items-center gap-1">
-                                <i class="fa-solid fa-plane-departure"></i>
-                                <span x-text="lang === 'id' ? 'Alternatif Tersedia' : 'Alternative Ready'"></span>
-                            </span>
-                            <span class="text-[9px] text-slate-400 font-mono">5m lalu</span>
-                        </div>
-                        <p class="text-[11px] text-slate-700 font-medium leading-snug"
-                           x-text="lang === 'id' ? 'Garuda GA830 (Gate 4A) siap dialihkan bebas biaya (Waiver 72A).' : 'Garuda GA830 (Gate 4A) ready for zero-fee transfer (Waiver 72A).'"></p>
-                    </div>
+                    <!-- Empty State -->
+                    <template x-if="notifications.length === 0">
+                        <div class="p-4 text-center text-slate-400 text-[11px] leading-relaxed"
+                             x-text="lang === 'id' ? 'Belum ada notifikasi. Alert gangguan penerbangan akan muncul di sini.' : 'No notifications yet. Flight disruption alerts will appear here.'"></div>
+                    </template>
 
-                    <!-- Alert 3: Baggage Telemetry -->
-                    <div class="p-2.5 hover:bg-slate-50 transition cursor-pointer space-y-0.5">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-                                <i class="fa-solid fa-suitcase-rolling"></i>
-                                <span x-text="lang === 'id' ? 'Status Bagasi' : 'Baggage Telemetry'"></span>
-                            </span>
-                            <span class="text-[9px] text-slate-400 font-mono">15m lalu</span>
+                    <template x-for="notif in notifications" :key="notif.id">
+                        <div class="p-2.5 hover:bg-slate-50 transition cursor-pointer space-y-0.5"
+                             :class="notif.is_read ? 'opacity-60' : ''"
+                             @click="notifOpen = false; if (notif.pnr_code && chatSessions.some(s => s.pnr_code === notif.pnr_code)) selectTicket(notif.pnr_code)">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold flex items-center gap-1" :class="notifMeta(notif.type).color">
+                                    <i class="fa-solid" :class="notifMeta(notif.type).icon"></i>
+                                    <span x-text="lang === 'id' ? notif.title_id : notif.title_en"></span>
+                                </span>
+                                <span class="text-[9px] text-slate-400 font-mono" x-text="notifTimeAgo(notif.created_at)"></span>
+                            </div>
+                            <p class="text-[11px] text-slate-700 font-medium leading-snug"
+                               x-text="lang === 'id' ? notif.message_id : notif.message_en"></p>
                         </div>
-                        <p class="text-[11px] text-slate-700 font-medium leading-snug"
-                           x-text="lang === 'id' ? 'Tag bagasi #GA-489102 tercatat di sistem Terminal 3 CGK.' : 'Baggage tag #GA-489102 verified in Terminal 3 CGK system.'"></p>
-                    </div>
+                    </template>
 
                 </div>
             </div>
